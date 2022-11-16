@@ -11,7 +11,7 @@ from data.svhnloader import SVHNLoader
 from tqdm import tqdm
 import numpy as np
 import os
-
+# 
 def train(model, train_loader, labeled_eval_loader, args):
     optimizer = SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)
@@ -20,7 +20,7 @@ def train(model, train_loader, labeled_eval_loader, args):
         loss_record = AverageMeter()
         model.train()
         exp_lr_scheduler.step()
-        for batch_idx, (x, label, idx) in enumerate(tqdm(train_loader)):
+        for batch_idx, (x, label, idx) in enumerate(tqdm(train_loader)):# only use label data to train the model
             x, label = x.to(device), label.to(device)
             output1, _, _ = model(x)
             loss= criterion1(output1, label)
@@ -80,18 +80,21 @@ if __name__ == "__main__":
         os.makedirs(model_dir)
     args.model_dir = model_dir+'/'+'{}.pth'.format(args.model_name) 
 
-    model = ResNet(BasicBlock, [2,2,2,2], args.num_labeled_classes, args.num_unlabeled_classes).to(device)
+    model = ResNet(BasicBlock, [2,2,2,2], args.num_labeled_classes, args.num_unlabeled_classes).to(device)# for this traininng they have 2 heads for labeleld and unlabled data.
+    # they only focus on training with the label head. 
 
     num_classes = args.num_labeled_classes + args.num_unlabeled_classes
 
-    state_dict = torch.load(args.rotnet_dir)
-    del state_dict['linear.weight']
+    state_dict = torch.load(args.rotnet_dir)# laod from pre weights
+    del state_dict['linear.weight']# just used for training annotation head.
     del state_dict['linear.bias']
     model.load_state_dict(state_dict, strict=False)
     for name, param in model.named_parameters(): 
         if 'head' not in name and 'layer4' not in name:
             param.requires_grad = False
- 
+    #they only train layers after layer 4. parameters before are fixed.
+    # annotation head to learn low level representation. 
+    # amazing i am lost but not important haahhaa
     if args.dataset_name == 'cifar10':
         labeled_train_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='train', aug='once', shuffle=True, target_list = range(args.num_labeled_classes))
         labeled_eval_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='test', aug=None, shuffle=False, target_list = range(args.num_labeled_classes))

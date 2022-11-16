@@ -63,7 +63,7 @@ def train(epoch, model, device, dataloader, optimizer, exp_lr_scheduler, criteri
         data, label = data.to(device), label.to(device)
         optimizer.zero_grad()
         output = model(data)
-        loss = criterion(output, label)
+        loss = criterion(output, label)# cross entrop loss between predicting output and labels of the annotations
      
         # measure accuracy and record loss
         acc = accuracy(output, label)

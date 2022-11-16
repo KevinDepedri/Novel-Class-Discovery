@@ -80,33 +80,33 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
             output1, output2, feat = model(x)
             output1_bar, output2_bar, _ = model(x_bar)
             prob1, prob1_bar, prob2, prob2_bar = F.softmax(output1, dim=1), F.softmax(output1_bar, dim=1), F.softmax(output2, dim=1), F.softmax(output2_bar, dim=1)
-            
-            mask_lb = label < args.num_labeled_classes
+            # we transfer them to probabilityies
+            mask_lb = label < args.num_labeled_classes# select unlabled data features. 
 
             rank_feat = (feat[~mask_lb]).detach()
 
             rank_idx = torch.argsort(rank_feat, dim=1, descending=True)
             rank_idx1, rank_idx2 = PairEnum(rank_idx)
-            rank_idx1, rank_idx2 = rank_idx1[:, :args.topk], rank_idx2[:, :args.topk]
+            rank_idx1, rank_idx2 = rank_idx1[:, :args.topk], rank_idx2[:, :args.topk]# select topk between 2 samples
             
-            rank_idx1, _ = torch.sort(rank_idx1, dim=1)
+            rank_idx1, _ = torch.sort(rank_idx1, dim=1)# we sort them. 
             rank_idx2, _ = torch.sort(rank_idx2, dim=1)
 
             rank_diff = rank_idx1 - rank_idx2
-            rank_diff = torch.sum(torch.abs(rank_diff), dim=1)
+            rank_diff = torch.sum(torch.abs(rank_diff), dim=1)# it indicate they are exactly same so they set their label pairwise to 1.
             target_ulb = torch.ones_like(rank_diff).float().to(device)
-            target_ulb[rank_diff > 0] = -1
+            target_ulb[rank_diff > 0] = -1# otherwise we set them to -1. they belong to different classes
 
             prob1_ulb, _ = PairEnum(prob2[~mask_lb])
             _, prob2_ulb = PairEnum(prob2_bar[~mask_lb])
 
-            loss_ce = criterion1(output1[mask_lb], label[mask_lb])
+            loss_ce = criterion1(output1[mask_lb], label[mask_lb])# crosss entropy loss
 
-            label[~mask_lb] = (output2[~mask_lb]).detach().max(1)[1] + args.num_labeled_classes
+            label[~mask_lb] = (output2[~mask_lb]).detach().max(1)[1] + args.num_labeled_classes# 
 
             loss_ce_add = w * criterion1(output1[~mask_lb], label[~mask_lb]) / args.rampup_coefficient * args.increment_coefficient
-            loss_bce = criterion2(prob1_ulb, prob2_ulb, target_ulb)
-            consistency_loss = F.mse_loss(prob1, prob1_bar) + F.mse_loss(prob2, prob2_bar)
+            loss_bce = criterion2(prob1_ulb, prob2_ulb, target_ulb)#binary cross entropy
+            consistency_loss = F.mse_loss(prob1, prob1_bar) + F.mse_loss(prob2, prob2_bar)# between label data or unlabled data 
 
             loss = loss_ce + loss_bce + loss_ce_add + w * consistency_loss
 
@@ -175,7 +175,7 @@ if __name__ == "__main__":
         os.makedirs(model_dir)
     args.model_dir = model_dir+'/'+'{}.pth'.format(args.model_name) 
 
-    model = ResNet(BasicBlock, [2,2,2,2], args.num_labeled_classes, args.num_unlabeled_classes).to(device)
+    model = ResNet(BasicBlock, [2,2,2,2], args.num_labeled_classes, args.num_unlabeled_classes).to(device)# we have 2 heads , label head and unlabled head
 
     num_classes = args.num_labeled_classes + args.num_unlabeled_classes
 
@@ -185,7 +185,7 @@ if __name__ == "__main__":
         for name, param in model.named_parameters(): 
             if 'head' not in name and 'layer4' not in name:
                 param.requires_grad = False
- 
+    # we fix paramters before layer 4
     if args.dataset_name == 'cifar10':
         mix_train_loader = CIFAR10LoaderMix(root=args.dataset_root, batch_size=args.batch_size, split='train', aug='twice', shuffle=True, labeled_list=range(args.num_labeled_classes), unlabeled_list=range(args.num_labeled_classes, num_classes))
         labeled_train_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='train', aug='once', shuffle=True, target_list = range(args.num_labeled_classes))
@@ -210,7 +210,7 @@ if __name__ == "__main__":
      
     if args.mode == 'train':
         if args.IL:
-            save_weight = model.head1.weight.data.clone()
+            save_weight = model.head1.weight.data.clone()# create new head 1 we copy the weights
             save_bias = model.head1.bias.data.clone()
             model.head1 = nn.Linear(512, num_classes).to(device)
             model.head1.weight.data[:args.num_labeled_classes] = save_weight
