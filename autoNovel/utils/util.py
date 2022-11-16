@@ -11,6 +11,8 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 # from sklearn.utils.linear_assignment_ import linear_assignment
 from utils.linear_assignment_ import linear_assignment
+# check https://stackoverflow.com/questions/62390517/no-module-named-sklearn-utils-linear-assignment the second comment
+# 
 import random
 import os
 import argparse
@@ -29,20 +31,21 @@ def cluster_acc(y_true, y_pred):
         accuracy, in [0,1]
     """
     y_true = y_true.astype(np.int64)
-    assert y_pred.size == y_true.size
-    D = max(y_pred.max(), y_true.max()) + 1
-    w = np.zeros((D, D), dtype=np.int64)
+    assert y_pred.size == y_true.size # check that predict and true has teh same dimensions
+    D = max(y_pred.max(), y_true.max()) + 1 # extract maximum from ypred and extract maximum from ytrue and pick the max of both then add 1
+    w = np.zeros((D, D), dtype=np.int64)# create a matrix D by d filled with zeros
     for i in range(y_pred.size):
-        w[y_pred[i], y_true[i]] += 1
-    ind = linear_assignment(w.max() - w)
-    return sum([w[i, j] for i, j in ind]) * 1.0 / y_pred.size
+        w[y_pred[i], y_true[i]] += 1# he is just filling up the matrix
+    ind = linear_assignment(w.max() - w)# i donot quite get what he is doing in here??? 
+    return sum([w[i, j] for i, j in ind]) * 1.0 / y_pred.size # straighten the matrix and sums it up and normalize by size
+    # as if he is normalizing in here.
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
     def __init__(self):
         self.reset()
 
-    def reset(self):
+    def reset(self):# setting all values to zero
         self.val = 0
         self.avg = 0
         self.sum = 0
@@ -50,7 +53,7 @@ class AverageMeter(object):
 
     def update(self, val, n=1):
         self.val = val
-        self.sum += val * n
+        self.sum += val * n# my guess is that n is number of variables
         self.count += n
         self.avg = self.sum / self.count
 
@@ -59,18 +62,21 @@ class Identity(nn.Module):
         super(Identity, self).__init__()
     def forward(self, x):
         return x
-
+# why doesnot he just use the module of binary cross entropy? My guess it is different in here than normal case
+# slowly we need to check it.
 class BCE(nn.Module):
     eps = 1e-7 # Avoid calculating log(0). Use the small value of float16.
     def forward(self, prob1, prob2, simi):
         # simi: 1->similar; -1->dissimilar; 0->unknown(ignore)
         assert len(prob1)==len(prob2)==len(simi), 'Wrong input size:{0},{1},{2}'.format(str(len(prob1)),str(len(prob2)),str(len(simi)))
+        # make sure that everything has the same size
+        # are these tensors or what exactly???
         P = prob1.mul_(prob2)
-        P = P.sum(1)
+        P = P.sum(1)# sum along axis
         P.mul_(simi).add_(simi.eq(-1).type_as(P))
         neglogP = -P.add_(BCE.eps).log_()
         return neglogP.mean()
-
+# slowly we need to check it later
 def PairEnum(x,mask=None):
     # Enumerate all pairs of feature in x
     assert x.ndimension() == 2, 'Input dimension must be 2'
@@ -98,7 +104,7 @@ def accuracy(output, target, topk=(1,)):
             correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
             res.append(correct_k.mul_(100.0 / batch_size))
         return res
-
+# setting see to something very specfic 
 def seed_torch(seed=1029):
     random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
@@ -108,7 +114,7 @@ def seed_torch(seed=1029):
     torch.cuda.manual_seed_all(seed) # if you are using multi-GPU.
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
-
+# for user input i guess
 def str2bool(v):
     if v.lower() in ('yes', 'true', 't', 'y', '1'):
         return True

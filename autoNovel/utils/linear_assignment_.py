@@ -1,7 +1,9 @@
 """
 Solve the unique lowest-cost assignment problem using the
 Hungarian algorithm (also known as Munkres algorithm).
-
+I would not divide deep on how he implement this stuff to be honest,
+if you want more to understand the use of this algorithim you just check munkres assigment algorithim on youtube
+Mostafa
 """
 # Based on original code by Brain Clapper, adapted to NumPy by Gael Varoquaux.
 # Heavily refactored by Lars Buitinck.
