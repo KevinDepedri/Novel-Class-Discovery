@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 
-path="../../data_sets/autonovel/"
-path_2="../../data_sets/CIFAR/"
-path_3="../../data_sets/SVHN/"
+path="data/experiments/"
+path_2="data/datasets/CIFAR/"
+path_3="data/datasets/SVHN/"
 
 mkdir -p $path
 mkdir -p $path_2
@@ -24,9 +24,9 @@ wget http://ufldl.stanford.edu/housenumbers/test_32x32.mat
 wget http://ufldl.stanford.edu/housenumbers/extra_32x32.mat
 
 # downloading the preweights for supervised and semi-supervised
-cd ../autonovel
+cd ../../experiments
 wget http://www.robots.ox.ac.uk/~vgg/research/auto_novel/asset/pretrained.zip
 
 unzip pretrained.zip && rm pretrained.zip
 
-cd ../../Trends_projects/autoNovel
+cd ../..

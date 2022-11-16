@@ -65,13 +65,13 @@ Our code for step of self supervised learning is based on the official code of t
 
 ```shell
 # Train on CIFAR10
-CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_cifar10.sh ./../../data_sets/CIFAR/ ./data/experiments/ ./../../data_sets/autonovel/pretrained/supervised_learning/resnet_rotnet_cifar10.pth
+CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_cifar10.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth
 
 # Train on CIFAR100
-CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_cifar100.sh ./../../data_sets/CIFAR/ ./data/experiments/ ./../../data_sets/autonovel/pretrained/supervised_learning/resnet_rotnet_cifar100.pth
+CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_cifar100.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar100.pth
 
 # Train on SVHN
-CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_svhn.sh ./../../data_sets/SVHN/ ./data/experiments/ ./../../data_sets/autonovel/pretrained/supervised_learning/resnet_rotnet_svhn.pth
+CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_svhn.sh ./data/datasets/SVHN/ ./data/experiments/ ./data/experiments/pretrained/supervised_learning/resnet_rotnet_svhn.pth
 ```
 
 To train in the Incremental Learning (IL) mode, replace ``auto_novel_{cifar10, cifar100, svhn}.sh`` in the above commands by ``auto_novel_IL_{cifar10, cifar100, svhn}.sh``.
