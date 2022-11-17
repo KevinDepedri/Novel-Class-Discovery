@@ -65,17 +65,19 @@ class CIFAR10(data.Dataset):
         if download:
             self.download()
 
-        if not self._check_integrity():
+        if not self._check_integrity(): # funcitons used to check if the data is available or not
             raise RuntimeError('Dataset not found or corrupted.' +
                                ' You can use download=True to download it')
-        downloaded_list = []
+        downloaded_list = []# empty
+        # split is a paramter passed in the begining of the intializing of the function
         if split=='train':
-            downloaded_list = self.train_list
+            downloaded_list = self.train_list# global bariables containing the files names of training
         elif split=='test':
-            downloaded_list = self.test_list
+            downloaded_list = self.test_list # global bariables containing the files names of test
         elif split=='train+test':
-            downloaded_list.extend(self.train_list)
-            downloaded_list.extend(self.test_list)
+            downloaded_list.extend(self.train_list)# put in a list
+            downloaded_list.extend(self.test_list)# extend is just like append but it places items in begining of list
+            # in here we can say that downlaoded list has the test items first then training items
 
         self.data = []
         self.targets = []

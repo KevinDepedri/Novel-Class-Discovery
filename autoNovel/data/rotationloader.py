@@ -36,25 +36,34 @@ class GenericDataset(data.Dataset):
         self.num_imgs_per_cat = num_imgs_per_cat
 
         if self.dataset_name=='cifar10':
-            self.mean_pix = [x/255.0 for x in [125.3, 123.0, 113.9]]
-            self.std_pix = [x/255.0 for x in [63.0, 62.1, 66.7]]
-
+            self.mean_pix = [x/255.0 for x in [125.3, 123.0, 113.9]] # [0.4913725490196078, 0.4823529411764706, 0.4466666666666667]
+            self.std_pix = [x/255.0 for x in [63.0, 62.1, 66.7]] # [0.24705882352941178, 0.24352941176470588, 0.2615686274509804]
+            # I ran the codes above and I got these values.
+            # they are different from values in cifar_datalaoders. I need to understand where did the values of datalaoder come from
+            # I googled and this are the true mean and std of cifar 10 dataset
+            # https://stackoverflow.com/questions/66678052/how-to-calculate-the-mean-and-the-std-of-cifar10-data
             if self.random_sized_crop:
                 raise ValueError('The random size crop option is not supported for the CIFAR dataset')
 
-            transform = []
-            if (split != 'test'):
-                transform.append(transforms.RandomCrop(32, padding=4))
-                transform.append(transforms.RandomHorizontalFlip())
-            transform.append(lambda x: np.asarray(x))
-            self.transform = transforms.Compose(transform)
+            transform = []# list of transformer that will be impleented 
+            if (split != 'test'):# you are entering if you are in the training conditions
+                transform.append(transforms.RandomCrop(32, padding=4)) # Crop the given image at a random location.
+                # If a sequence of length 4 is provided this is the padding for the left, top, right and bottom borders respectively
+                transform.append(transforms.RandomHorizontalFlip()) # Horizontally flip the given image randomly with a given probability
+                # default is 0.5. 
+            transform.append(lambda x: np.asarray(x))# add transformaiton of convert input into array
+            self.transform = transforms.Compose(transform) # Composes several transforms together. 
             self.data = datasets.__dict__[self.dataset_name.upper()](
                 dataset_root, train=self.split=='train',
-                download=True, transform=self.transform)
+                download=True, transform=self.transform)# what is this???
+            # object.__dict__ is A dictionary or other mapping object used to store an object’s (writable) attributes.
+            # datasets.__dict__['CIFAR10'] ---> <class 'torchvision.datasets.cifar.CIFAR10'>
+            # you are telling him andiammmoooo download me dataset putin this path and do the following transformaiton.
+            # we learn that are in the form of numpy arrays
         elif self.dataset_name=='cifar100':
             self.mean_pix = [x/255.0 for x in [129.3, 124.1, 112.4]]
             self.std_pix = [x/255.0 for x in [68.2, 65.4, 70.4]]
-
+            # very similar thing where he is using the normalizing stuff.
             if self.random_sized_crop:
                 raise ValueError('The random size crop option is not supported for the CIFAR dataset')
 
@@ -76,7 +85,7 @@ class GenericDataset(data.Dataset):
 
             transform = []
             if (split != 'test'):
-                transform.append(transforms.RandomCrop(32, padding=4))
+                transform.append(transforms.RandomCrop(32, padding=4))# why no horitonzal flip with svhn???
             transform.append(lambda x: np.asarray(x))
             self.transform = transforms.Compose(transform)
             self.data = datasets.__dict__[self.dataset_name.upper()](
@@ -87,12 +96,13 @@ class GenericDataset(data.Dataset):
 
     def __getitem__(self, index):
         img, label = self.data[index]
-        return img, int(label)
+        return img, int(label)# applying the 2 main methods that should be implemented for any dataset
 
     def __len__(self):
         return len(self.data)
 
-class Denormalize(object):
+class Denormalize(object):# they idea is here is he take tensor multiply by std and add to it the mean
+    # lets wait and see where he is using this in the code
     def __init__(self, mean, std):
         self.mean = mean
         self.std = std
@@ -125,22 +135,22 @@ class DataLoader(object):
                  shuffle=True):
         self.dataset = dataset
         self.shuffle = shuffle
-        self.epoch_size = epoch_size if epoch_size is not None else len(dataset)
+        self.epoch_size = epoch_size if epoch_size is not None else len(dataset) # what is the epoch size?number of iterations? maybe?
         self.batch_size = batch_size
         self.unsupervised = unsupervised
         self.num_workers = num_workers
 
         mean_pix  = self.dataset.mean_pix
-        std_pix   = self.dataset.std_pix
+        std_pix   = self.dataset.std_pix# they are set accordingly
         self.transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(mean=mean_pix, std=std_pix)
-        ])
+        ])#turning into tensors and transfomring
         self.inv_transform = transforms.Compose([
             Denormalize(mean_pix, std_pix),
             lambda x: x.numpy() * 255.0,
             lambda x: x.transpose(1,2,0).astype(np.uint8),
-        ])
+        ])# turn back to normal numpy array
 
     def get_iterator(self, epoch=0):
         rand_seed = epoch * self.epoch_size

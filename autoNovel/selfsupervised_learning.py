@@ -42,7 +42,7 @@ class ResNet(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        if is_adapters:
+        if is_adapters:# i donot understnad the use of id_adapters. I need to check the paper more to see if he mentions is
             out = F.relu(self.bn1(self.conv1(x)+self.parallel_conv1(x)))
         else:
             out = F.relu(self.bn1(self.conv1(x)))
