@@ -53,7 +53,7 @@ class AverageMeter(object):
 
     def update(self, val, n=1):
         self.val = val
-        self.sum += val * n# my guess is that n is number of variables
+        self.sum += val * n# n is number of the batch
         self.count += n
         self.avg = self.sum / self.count
 
@@ -118,7 +118,7 @@ def accuracy(output, target, topk=(1,)):
             correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)# you reshape to (256) and you summ them all
             res.append(correct_k.mul_(100.0 / batch_size))# divided by batch size while mutlipl by 100
         return res
-# setting see to something very specfic 
+# setting seed to something very specfic 
 def seed_torch(seed=1029):
     random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
