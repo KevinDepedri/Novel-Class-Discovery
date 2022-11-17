@@ -68,16 +68,19 @@ def train(epoch, model, device, dataloader, optimizer, exp_lr_scheduler, criteri
     exp_lr_scheduler.step()# putting this here keeps making a warning. we could move it
     model.train()# set the model in the train mood.
     for batch_idx, (data, label) in enumerate(tqdm(dataloader(epoch))):# iterating using tqdm  with enum 
-        data, label = data.to(device), label.to(device)# moving data to gpu
+        data, label = data.to(device), label.to(device)# moving data to gpu you input (256,3,32,32)
         optimizer.zero_grad()# zeroing the gradient
-        output = model(data)# passing data to the model
+        output = model(data)# passing data to the model, the output (256,4)
         loss = criterion(output, label)# cross entrop loss between predicting output and labels of the annotations
         # calculating the loss the criteria in here is CrossEntropyLoss
         # the idea or main concept in here that you rotate images and accordingly try to predict how it was rotation 
         # accordingly. Maybe i missunderstood sthg. let continue and see. ? 
         # measure accuracy and record loss
-        acc = accuracy(output, label)# the accuracy function is very very annoying
-        acc_record.update(acc[0].item(), data.size(0))
+        acc = accuracy(output, label)# the accuracy function in utils files. for more detaisl go check the file.
+        # (topk is not passed so it is set to (1,))
+        # acc[0] is top of the list. in this case you only have 1 topk
+        # so you just check accuracy at this point
+        acc_record.update(acc[0].item(), data.size(0))# size 0 is the batch size
         loss_record.update(loss.item(), data.size(0))# it is very annoying
 
         # compute gradient and do optimizer step

@@ -92,17 +92,31 @@ def PairEnum(x,mask=None):
 def accuracy(output, target, topk=(1,)):
     """Computes the accuracy over the k top predictions for the specified values of k"""
     with torch.no_grad():
-        maxk = max(topk)
-        batch_size = target.size(0)
+        maxk = max(topk)# if topk(1,) so maxk is set to 1
+        batch_size = target.size(0)# set to 256
+        # output is a tensor (256,4)
+        _, pred = output.topk(maxk, 1, True, True)#shape of pred is (1,256), pred is the index we are returning the index
+        # Returns the k largest elements of the given input tensor along a given dimension.
+        # torch.topk(input, k, dim=None, largest=True, sorted=True, *, out=None)
+        # k the k in “top-k”
+        # dim the dimension to sort along
+        pred = pred.t()# shape is (1,256) # why didnot it change shape after transpose? double check ?
+        # we do the transpose operation.
+        # Expects input to be <= 2-D tensor and transposes dimensions 0 and 1.
 
-        _, pred = output.topk(maxk, 1, True, True)
-        pred = pred.t()
-        correct = pred.eq(target.view(1, -1).expand_as(pred))
+        # target has shape of 256 so we make target.view to turn it to (1,256)
+        correct = pred.eq(target.view(1, -1).expand_as(pred))# [1,256]
+        # Expand this tensor to the same size as other. self.expand_as(other) is equivalent to self.expand(other.size()).
+        # i donot get why in here he uses the expand operations but for semi supervised learning , it doesnot patter
+        # pred.eq Computes element-wise equality
+        # it has output shape of 1,256
+
+
 
         res = []
-        for k in topk:
-            correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
-            res.append(correct_k.mul_(100.0 / batch_size))
+        for k in topk:# k is equal to 1
+            correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)# you reshape to (256) and you summ them all
+            res.append(correct_k.mul_(100.0 / batch_size))# divided by batch size while mutlipl by 100
         return res
 # setting see to something very specfic 
 def seed_torch(seed=1029):
