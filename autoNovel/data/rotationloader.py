@@ -112,11 +112,12 @@ class Denormalize(object):# they idea is here is he take tensor multiply by std 
             t.mul_(s).add_(m)
         return tensor
 
-def rotate_img(img, rot):
+def rotate_img(img, rot):# this function is used to rotat the image.
     if rot == 0: # 0 degrees rotation
         return img
     elif rot == 90: # 90 degrees rotation
         return np.flipud(np.transpose(img, (1,0,2)))
+        # flipud Reverse the order of elements along axis 0 (up/down).
     elif rot == 180: # 90 degrees rotation
         return np.fliplr(np.flipud(img))
     elif rot == 270: # 270 degrees rotation / or -90
@@ -161,22 +162,25 @@ class DataLoader(object):
             # plus the label of the rotation, i.e., 0 for 0 degrees rotation,
             # 1 for 90 degrees, 2 for 180 degrees, and 3 for 270 degrees.
             def _load_function(idx):
-                idx = idx % len(self.dataset)
-                img0, _ = self.dataset[idx]
+                idx = idx % len(self.dataset)# the size of the data set
+                # we are making index from 0-4999 for the example of cifar 19
+                img0, _ = self.dataset[idx]# i donot care soo much about the label in here
                 rotated_imgs = [
                     self.transform(img0),
                     self.transform(rotate_img(img0,  90).copy()),
                     self.transform(rotate_img(img0, 180).copy()),
                     self.transform(rotate_img(img0, 270).copy())
-                ]
+                ]# it is al ist containing all the rotaiton image applied to it the transform
                 rotation_labels = torch.LongTensor([0, 1, 2, 3])
-                return torch.stack(rotated_imgs, dim=0), rotation_labels
+                return torch.stack(rotated_imgs, dim=0), rotation_labels# turn list into a stack
             def _collate_fun(batch):
                 batch = default_collate(batch)
-                assert(len(batch)==2)
-                batch_size, rotations, channels, height, width = batch[0].size()
-                batch[0] = batch[0].view([batch_size*rotations, channels, height, width])
-                batch[1] = batch[1].view([batch_size*rotations])
+                assert(len(batch)==2)# make sure batch size is equal to 2 ? whyyy??because i guess load function
+                #  returns a stack and rotation labels
+                batch_size, rotations, channels, height, width = batch[0].size()# you accessesing the stack
+                batch[0] = batch[0].view([batch_size*rotations, channels, height, width])# changing the shape
+                batch[1] = batch[1].view([batch_size*rotations])# changing the shape
+                # Returns a new tensor with the same data as the self tensor but of a different shape.
                 return batch
         else: # supervised mode
             # if in supervised mode define a loader function that given the
@@ -186,13 +190,24 @@ class DataLoader(object):
                 img, categorical_label = self.dataset[idx]
                 img = self.transform(img)
                 return img, categorical_label
+            # collate_fn is called with a list of data samples at each time. 
+            # It is expected to collate the input samples into a batch for yielding from the data loader iterator.
             _collate_fun = default_collate
+            # Function that takes in a batch of data and puts the elements within the batch into a tensor with
+            # an additional outer dimension - batch size. The exact output type can be a torch.Tensor,
+            # a Sequence of torch.Tensor, a Collection of torch.Tensor, or left unchanged, depending on the input type. 
 
         tnt_dataset = tnt.dataset.ListDataset(elem_list=range(self.epoch_size),
-            load=_load_function)
+            load=_load_function)#Dataset which loads data from a list using given function.
+        # load=function which loads the data.i-th sample is returned by `load(elem_list[i])`. By default `load`
+        #    is identity i.e, `lambda x: x`
         data_loader = tnt_dataset.parallel(batch_size=self.batch_size,
             collate_fn=_collate_fun, num_workers=self.num_workers,
-            shuffle=self.shuffle)
+            shuffle=self.shuffle)# you returning directly the data loader
+            # torch.utils.data.DataLoader(batch_size=1, shuffle=None,num_workers=0, collate_fn=None)
+            # collate – merges a list of samples to form a mini-batch of Tensor(s). 
+              # Used when using batched loading from a map-style dataset.
+            # num_workers  how many subprocesses to use for data loading. 0 means that the data will be loaded in the main process. (
         return data_loader
 
     def __call__(self, epoch=0):
@@ -200,3 +215,28 @@ class DataLoader(object):
 
     def __len__(self):
         return self.epoch_size / self.batch_size
+    
+# this should be removed for later I was just testing to know what is happening inside to make sure i understood everything 
+if __name__ == '__main__':
+    import matplotlib.pyplot as plt
+    dataset_train = GenericDataset(
+        dataset_name='cifar10',
+        split='train',
+        dataset_root='./data/datasets/CIFAR/'
+       )
+    print(len(dataset_train)) # the length for cifar is 50k
+    dloader_train = DataLoader(
+        dataset=dataset_train,
+        batch_size=64,
+        num_workers=4,
+        shuffle=True)
+    iterator=iter(dloader_train(0))
+    inputs, classes = next(iterator)
+    print(inputs[1])
+    print(inputs[1].shape) #3*32*32
+    print(type(inputs[1])) #torch tensor
+    print(len(inputs)) #256
+    print(len(classes)) #256
+    print((classes)) #256
+    # plt.imshow( inputs[0].permute(1, 2, 0)  )
+    # plt.show()

@@ -41,6 +41,10 @@ def cosine_rampdown(current, rampdown_length):
     """Cosine rampdown from https://arxiv.org/abs/1608.03983"""
     assert 0 <= current <= rampdown_length
     return float(.5 * (np.cos(np.pi * current / rampdown_length) + 1))
+
+
+# This part is used mainly for debugging nothing more.
+# Please understand that we should comment it later
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
     epoch= np.arange(1,200)

@@ -151,7 +151,7 @@ def main():
 
     global is_adapters
     is_adapters = 0 # it is a global variable and it is set to 0 
-    model = ResNet(BasicBlock, [2,2,2,2], num_classes=4)
+    model = ResNet(BasicBlock, [2,2,2,2], num_classes=4)# it is trying to predict the rotation
     model = model.to(device)
 
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=5e-4, nesterov=True)
