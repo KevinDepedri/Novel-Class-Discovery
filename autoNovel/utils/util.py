@@ -41,12 +41,14 @@ def cluster_acc(y_true, y_pred):
         w[y_pred[i], y_true[i]] += 1# he is just filling up the matrix
         # this matrix is what? THE AMAZING CONFUSION MATRIXXX. It took me sometimes to figure it out.
     # 
-    ind = linear_assignment(w.max() - w)# i donot quite get what he is doing in here???
+    ind = linear_assignment(w.max() - w)# i donot quite get why he is doing in here??? why subtract the maxx? 
     # he takes a matrix that is called w and apply on it the max operation.  so you get the maximum number in all of the matrices.
     # so for example if your matrix contain biggeest number equal to 10, he subtract 10 out of everything else and input it to linear
-    # assigment    
-    return sum([w[i, j] for i, j in ind]) * 1.0 / y_pred.size # straighten the matrix and sums it up and normalize by size
-    # as if he is normalizing in here.
+    # assigment
+    # it returns The pairs of (row, col) indices in the original array giving the original ordering. 
+    return sum([w[i, j] for i, j in ind]) * 1.0 / y_pred.size # he bring out the solution with least cost and we add all the cost
+    # what does this mean???
+    # why is hungarian algorithim used on the confusion matrix? is it a confusion matrix??? maybe i should ask zhong.
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
