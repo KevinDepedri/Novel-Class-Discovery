@@ -93,4 +93,5 @@ if __name__ == '__main__':
     print(summary(model, (3,32,32),batch_size=256))
     y1, y2,y3 = model(Variable(torch.randn(256,3,32,32).to(device)))
     print(y1.size(), y2.size(),y3.size())
-
+    for name, param in model.named_parameters(): 
+        print(name)

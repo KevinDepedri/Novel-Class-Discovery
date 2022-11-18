@@ -208,18 +208,20 @@ class CIFAR100(CIFAR10):
         'md5': '7973b15100ade9c7d40fb424638fde48',
     }
 
-def CIFAR10Data(root, split='train', aug=None, target_list=range(5)):
+def CIFAR10Data(root, split='train', aug=None, target_list=range(5)):# this function is called for supervised learning
     if aug==None:
         transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
         ])
-    elif aug=='once':
+    elif aug=='once':# for supervised learning
         transform = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
+            transforms.RandomCrop(32, padding=4),# he random cropping while padding
+            transforms.RandomHorizontalFlip(),# doing random horizontal flip
+            transforms.ToTensor(),# turning it to tensor
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            # Normalize a tensor image with mean and standard deviation.  my question is from where did he get this values 
+            # i donot understand to be honest
         ])
     elif aug=='twice':
         transform = TransformTwice(transforms.Compose([
@@ -231,8 +233,8 @@ def CIFAR10Data(root, split='train', aug=None, target_list=range(5)):
     dataset = CIFAR10(root=root, split=split, transform=transform, target_list=target_list)
     return dataset
 
-def CIFAR10Loader(root, batch_size, split='train', num_workers=2,  aug=None, shuffle=True, target_list=range(5)):
-    dataset = CIFAR10Data(root, split, aug,target_list)
+def CIFAR10Loader(root, batch_size, split='train', num_workers=2,  aug=None, shuffle=True, target_list=range(5)):# it gets called in supervised learning
+    dataset = CIFAR10Data(root, split, aug,target_list)# for supervised learning augmentation is set to once
     loader = data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     return loader
 
@@ -277,19 +279,19 @@ def CIFAR10LoaderTwoStream(root, batch_size, split='train',num_workers=2, aug=No
     loader.unlabeled_length = len(dataset_unlabeled)
     return loader
 
-
+# used for supervised learning
 def CIFAR100Data(root, split='train', aug=None, target_list=range(80)):
     if aug==None:
-        transform = transforms.Compose([
+        transform = transforms.Compose([# for test you donot do any crop or horizontal flip you enter here with test set
             transforms.ToTensor(),
             transforms.Normalize((0.507, 0.487, 0.441), (0.267, 0.256, 0.276)),
         ])
-    elif aug=='once':
+    elif aug=='once':# enter into here during supervised learning
         transform = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize((0.507, 0.487, 0.441), (0.267, 0.256, 0.276)),
+            transforms.RandomCrop(32, padding=4),# random crop with padding for all sides
+            transforms.RandomHorizontalFlip(),# flipp
+            transforms.ToTensor(),# turn to tensor
+            transforms.Normalize((0.507, 0.487, 0.441), (0.267, 0.256, 0.276)),# i donot understand from where he got this values
         ])
     elif aug=='twice':
         transform = TransformTwice(transforms.Compose([
@@ -300,10 +302,10 @@ def CIFAR100Data(root, split='train', aug=None, target_list=range(80)):
         ]))
     dataset = CIFAR100(root=root, split=split, transform=transform, target_list=target_list)
     return dataset
-
+# used with cifar 100 in supervised learning 
 def CIFAR100Loader(root, batch_size, split='train', num_workers=2,  aug=None, shuffle=True, target_list=range(80)):
     dataset = CIFAR100Data(root, split, aug,target_list)
-    loader = data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+    loader = data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)# returns the data laoder
     return loader
 
 def CIFAR100LoaderMix(root, batch_size, split='train',num_workers=2, aug=None, shuffle=True, labeled_list=range(80), unlabeled_list=range(90, 100)):

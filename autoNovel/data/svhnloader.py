@@ -135,18 +135,18 @@ class SVHN(data.Dataset):
         tmp = '    Target Transforms (if any): '
         fmt_str += '{0}{1}'.format(tmp, self.target_transform.__repr__().replace('\n', '\n' + ' ' * len(tmp)))
         return fmt_str
-
+# used with supervised 
 def SVHNData(root, split='train',  aug=None, target_list=range(5)):
     if aug==None:
         transform = transforms.Compose([
-            transforms.ToTensor(),
+            transforms.ToTensor(),# for test you donot do any flip or crop 
             transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
         ])  
     elif aug=='once':
         transform = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),
+            transforms.RandomCrop(32, padding=4),# same padding but no longer any horizontal fip
             transforms.ToTensor(),
-            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),
+            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225)),# my same problem i donot understand from where he got this values
         ])  
     elif aug=='twice':
         transform = TransformTwice(transforms.Compose([
@@ -158,7 +158,7 @@ def SVHNData(root, split='train',  aug=None, target_list=range(5)):
     dataset = SVHN(root=root, split=split, transform=transform, target_list=target_list)
     return dataset 
 
-
+# used for supervised data loader
 def SVHNLoader(root, batch_size, split='train',  num_workers=2, aug=None, shuffle=True, target_list=range(5)):
     dataset = SVHNData(root, split, aug,target_list)
     loader = data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)

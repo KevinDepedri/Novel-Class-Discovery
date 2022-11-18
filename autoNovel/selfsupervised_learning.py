@@ -140,7 +140,7 @@ def main():
         # so in general we expect that inside the experiments we should find 3 kinds of folder
         # 1 for the superverised, semi supervised and autonovel discovery
     args.model_dir = model_dir+'/'+'{}.pth'.format(args.model_name) # so the saved weight will be turned into
-    # rotnet.pth but why when i open I see rotnet_cifar10 ??? interesting interesting. 
+    # rotnet.pth but why when i open I see rotnet_cifar10 ??? using command passed previously i made it name rotnet_ciar
 
     # then ext part has been commented in the rotation laoder. check if needed.
     dataset_train = GenericDataset(
