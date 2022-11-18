@@ -71,6 +71,8 @@ def test(model, test_loader, args):
         # information is normalized by some generalized mean of H(labels_true) and H(labels_pred)), defined by the average_method.
         # This metric is independent of the absolute values of the labels: a permutation of the class or cluster label values 
         # won’t change the score value in any way.
+        
+    ############################################################################################################################
     # what is the ari score? sci learn function that i need to google to understand.
         # it is called adjusted_rand_score on sci learn
         # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.adjusted_rand_score.html
@@ -88,6 +90,14 @@ def test(model, test_loader, args):
         # by taking all points identified within the same cluster. This value is equal to 0 when points are assigned into 
         # .clusters randomly and it equals to 1 when the two cluster results are same. 
         # This metric is used to evaluate whether dimension-reduced similarity cluster results are similar to one other.
+    # What is the adjusted Rand index?
+        #The adjusted Rand index is the corrected-for-chance version of the Rand index. Such a correction for chance 
+        # establishes a baseline by using the expected similarity of all pair-wise comparisons between clusterings specified 
+        # by a random model.
+        # https://baiadellaconoscenza.com/dati/argomento/read/9864-what-is-the-adjusted-rand-index#question-0
+    # What does a negative adjusted Rand index mean?
+        # Negative ARI says that the agreement is less than what is expected from a random result.
+        # This means the results are 'orthogonal' or 'complementary' to some extend.
     print('Test acc {:.4f}, nmi {:.4f}, ari {:.4f}'.format(acc, nmi, ari))
     return preds 
 

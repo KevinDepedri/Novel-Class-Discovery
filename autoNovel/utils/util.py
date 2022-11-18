@@ -30,13 +30,21 @@ def cluster_acc(y_true, y_pred):
     # Return
         accuracy, in [0,1]
     """
+    # ytrue is an array of size 5000 containing all the test data
     y_true = y_true.astype(np.int64)
     assert y_pred.size == y_true.size # check that predict and true has teh same dimensions
-    D = max(y_pred.max(), y_true.max()) + 1 # extract maximum from ypred and extract maximum from ytrue and pick the max of both then add 1
+    D = max(y_pred.max(), y_true.max()) + 1 #extrats value 5 Extract the size of the matrix. 
+    # extract maximum from ypred and extract maximum from ytrue and pick the max of both then add 1
     w = np.zeros((D, D), dtype=np.int64)# create a matrix D by d filled with zeros
-    for i in range(y_pred.size):
+    # imagine it as if it is D arrays each array contain D elements
+    for i in range(y_pred.size):# for the full size of the test set.
         w[y_pred[i], y_true[i]] += 1# he is just filling up the matrix
-    ind = linear_assignment(w.max() - w)# i donot quite get what he is doing in here??? 
+        # this matrix is what? THE AMAZING CONFUSION MATRIXXX. It took me sometimes to figure it out.
+    # 
+    ind = linear_assignment(w.max() - w)# i donot quite get what he is doing in here???
+    # he takes a matrix that is called w and apply on it the max operation.  so you get the maximum number in all of the matrices.
+    # so for example if your matrix contain biggeest number equal to 10, he subtract 10 out of everything else and input it to linear
+    # assigment    
     return sum([w[i, j] for i, j in ind]) * 1.0 / y_pred.size # straighten the matrix and sums it up and normalize by size
     # as if he is normalizing in here.
 
