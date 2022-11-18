@@ -160,8 +160,8 @@ if __name__ == "__main__":
     parser.add_argument('--num_labeled_classes', default=5, type=int)# the number of labled classes
     parser.add_argument('--dataset_root', type=str, default='./data/datasets/CIFAR/')# the root directoryyy
     parser.add_argument('--exp_root', type=str, default='./data/experiments/')# where i save my experiements
-    parser.add_argument('--warmup_model_dir', type=str, default='./data/experiments/pretrain/auto_novel/resnet_rotnet_cifar10.pth')#the supervised model saved from step 2 
-    parser.add_argument('--topk', default=5, type=int)# interesting what is topk?
+    parser.add_argument('--warmup_model_dir', type=str, default='./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth')#the supervised model saved from step 2 
+    parser.add_argument('--topk', default=5, type=int)# interesting what is topk? 
     parser.add_argument('--IL', action='store_true', default=False, help='w/ incremental learning')# turning on the incremental leanring feature
     parser.add_argument('--model_name', type=str, default='resnet')# the name of model
     parser.add_argument('--dataset_name', type=str, default='cifar10', help='options: cifar10, cifar100, svhn')# the dataset what we will work on
