@@ -144,49 +144,51 @@ if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(
             description='cluster',
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--lr', type=float, default=0.1)
-    parser.add_argument('--gamma', type=float, default=0.1)
-    parser.add_argument('--momentum', type=float, default=0.9)
-    parser.add_argument('--weight_decay', type=float, default=1e-4)
-    parser.add_argument('--epochs', default=200, type=int)
-    parser.add_argument('--rampup_length', default=150, type=int)
-    parser.add_argument('--rampup_coefficient', type=float, default=50)
-    parser.add_argument('--increment_coefficient', type=float, default=0.05)
-    parser.add_argument('--step_size', default=170, type=int)
-    parser.add_argument('--batch_size', default=128, type=int)
-    parser.add_argument('--num_unlabeled_classes', default=5, type=int)
-    parser.add_argument('--num_labeled_classes', default=5, type=int)
-    parser.add_argument('--dataset_root', type=str, default='./data/datasets/CIFAR/')
-    parser.add_argument('--exp_root', type=str, default='./data/experiments/')
-    parser.add_argument('--warmup_model_dir', type=str, default='./data/experiments/pretrain/auto_novel/resnet_rotnet_cifar10.pth')
-    parser.add_argument('--topk', default=5, type=int)
-    parser.add_argument('--IL', action='store_true', default=False, help='w/ incremental learning')
-    parser.add_argument('--model_name', type=str, default='resnet')
-    parser.add_argument('--dataset_name', type=str, default='cifar10', help='options: cifar10, cifar100, svhn')
-    parser.add_argument('--seed', default=1, type=int)
-    parser.add_argument('--mode', type=str, default='train')
+            formatter_class=argparse.ArgumentDefaultsHelpFormatter)# these are things that you can input through the terminal
+    # you use the parse so that when you run the file oyu can pass some inputs these are the inputs. 
+    parser.add_argument('--lr', type=float, default=0.1)# the learning rate
+    parser.add_argument('--gamma', type=float, default=0.1)# the gamma of the schedular
+    parser.add_argument('--momentum', type=float, default=0.9)# the momenetum of the optimizer
+    parser.add_argument('--weight_decay', type=float, default=1e-4)# the weight decay cofficient fo l2 
+    parser.add_argument('--epochs', default=200, type=int)# the number of epochs that we run during traininnig
+    parser.add_argument('--rampup_length', default=150, type=int)# the length of rampup that is passed to ramps.py functioncts 
+    parser.add_argument('--rampup_coefficient', type=float, default=50)# rampup coefficieints
+    parser.add_argument('--increment_coefficient', type=float, default=0.05)# what is this ?
+    parser.add_argument('--step_size', default=170, type=int)# what is the step size it is used with learnign rate schedule
+    parser.add_argument('--batch_size', default=128, type=int)# the batch size used 
+    parser.add_argument('--num_unlabeled_classes', default=5, type=int)# the number of unlabled classes
+    parser.add_argument('--num_labeled_classes', default=5, type=int)# the number of labled classes
+    parser.add_argument('--dataset_root', type=str, default='./data/datasets/CIFAR/')# the root directoryyy
+    parser.add_argument('--exp_root', type=str, default='./data/experiments/')# where i save my experiements
+    parser.add_argument('--warmup_model_dir', type=str, default='./data/experiments/pretrain/auto_novel/resnet_rotnet_cifar10.pth')#the supervised model saved from step 2 
+    parser.add_argument('--topk', default=5, type=int)# interesting what is topk?
+    parser.add_argument('--IL', action='store_true', default=False, help='w/ incremental learning')# turning on the incremental leanring feature
+    parser.add_argument('--model_name', type=str, default='resnet')# the name of model
+    parser.add_argument('--dataset_name', type=str, default='cifar10', help='options: cifar10, cifar100, svhn')# the dataset what we will work on
+    parser.add_argument('--seed', default=1, type=int)# specific seed that we set in the beinging
+    parser.add_argument('--mode', type=str, default='train')# what mode are we working on.??? the training mode
     args = parser.parse_args()
-    args.cuda = torch.cuda.is_available()
-    device = torch.device("cuda" if args.cuda else "cpu")
-    seed_torch(args.seed)
-    runner_name = os.path.basename(__file__).split(".")[0]
-    model_dir= os.path.join(args.exp_root, runner_name)
+    args.cuda = torch.cuda.is_available()# checkign if there is cuda
+    device = torch.device("cuda" if args.cuda else "cpu")# setting device to cuda incase it is here else we set it to cpu
+    seed_torch(args.seed)# this is a funciton in the utils folder that set alot different modules to a specific seed.
+    runner_name = os.path.basename(__file__).split(".")[0]# create a folder with with a name of autonovel under experiments
+    model_dir= os.path.join(args.exp_root, runner_name)# join the path
     if not os.path.exists(model_dir):
-        os.makedirs(model_dir)
-    args.model_dir = model_dir+'/'+'{}.pth'.format(args.model_name) 
+        os.makedirs(model_dir)# create the folder
+    args.model_dir = model_dir+'/'+'{}.pth'.format(args.model_name) # the name that we will save the model with 
 
     model = ResNet(BasicBlock, [2,2,2,2], args.num_labeled_classes, args.num_unlabeled_classes).to(device)# we have 2 heads , label head and unlabled head
 
-    num_classes = args.num_labeled_classes + args.num_unlabeled_classes
+    num_classes = args.num_labeled_classes + args.num_unlabeled_classes # total number of classes.
 
-    if args.mode=='train':
-        state_dict = torch.load(args.warmup_model_dir)
+    if args.mode=='train':# if we are in training mood.
+        state_dict = torch.load(args.warmup_model_dir)# load the training weights
         model.load_state_dict(state_dict, strict=False)
         for name, param in model.named_parameters(): 
             if 'head' not in name and 'layer4' not in name:
-                param.requires_grad = False
+                param.requires_grad = False# anything before layer 4 is fixed 
     # we fix paramters before layer 4
+    # this will be very tricky many loaders so we better understand what is each loader doing. 
     if args.dataset_name == 'cifar10':
         mix_train_loader = CIFAR10LoaderMix(root=args.dataset_root, batch_size=args.batch_size, split='train', aug='twice', shuffle=True, labeled_list=range(args.num_labeled_classes), unlabeled_list=range(args.num_labeled_classes, num_classes))
         labeled_train_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='train', aug='once', shuffle=True, target_list = range(args.num_labeled_classes))
