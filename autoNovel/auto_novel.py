@@ -13,7 +13,7 @@ from data.svhnloader import SVHNLoader, SVHNLoaderMix
 from tqdm import tqdm
 import numpy as np
 import os
-## starting the monster file. 
+# Test
 
 def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args):
     optimizer = SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
