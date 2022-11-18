@@ -24,6 +24,7 @@ def train(model, train_loader, labeled_eval_loader, args):
         model.train()
         exp_lr_scheduler.step()
         for batch_idx, (x, label, idx) in enumerate(tqdm(train_loader)):# only use label data to train the model
+            # dataloader contain 3 things
             x, label = x.to(device), label.to(device)
             output1, _, _ = model(x)# returns output 1 for first head,output 2 for second head, output 3 which is outptu before heads
             # my guess i am trainingi supervised ehre so i donot care about unsupervised head.
@@ -34,24 +35,59 @@ def train(model, train_loader, labeled_eval_loader, args):
             optimizer.step()# tell the optimzier to take a step 
         print('Train Epoch: {} Avg Loss: {:.4f}'.format(epoch, loss_record.avg))
         print('test on labeled classes')
-        args.head = 'head1'
+        args.head = 'head1'# we are setting that we want head number 1 to be tested and also this head is trained supervised.
+        # other head until the current momemt it is useless.
         test(model, labeled_eval_loader, args)# run a test 
 
 def test(model, test_loader, args):
     model.eval() # turn model to evaluation 
     preds=np.array([])# numpy array for predictions
     targets=np.array([])# numpy array for targets 
-    for batch_idx, (x, label, _) in enumerate(tqdm(test_loader)):# why 3 things ?git
-        x, label = x.to(device), label.to(device)
-        output1, output2, _ = model(x)
+    for batch_idx, (x, label, _) in enumerate(tqdm(test_loader)):# data loader contain 3 things so everything is fine. no problem
+        x, label = x.to(device), label.to(device)# the labels
+        output1, output2, _ = model(x)# head 1 output and head 2 output
+        # output1 has size of (128,5)
         if args.head=='head1':
-            output = output1
+            output = output1# indicating that we are using the output of head 1 only in here
         else:
-            output = output2
-        _, pred = output.max(1)
-        targets=np.append(targets, label.cpu().numpy())
+            output = output2# are we training boths heads ??? no we are not 
+        _, pred = output.max(1)# Returns the maximum value of all elements in the input tensor.
+        # dim is set to 1 okay ??? do you understand?
+        # returns a tupple of (max, max_indices)
+        # we care only about max indices 
+        # so my guess pred is size of 128 nyahahahahahahhaha
+        targets=np.append(targets, label.cpu().numpy())# label.cpu.numpy convert tensor to numpy Returns the tensor as a NumPy ndarray.
+        #Append values to the end of an array called targets,
+        # after each iteration you add 128 new values in the end of the target
         preds=np.append(preds, pred.cpu().numpy())
+        # very similar thing is happening in here.
     acc, nmi, ari = cluster_acc(targets.astype(int), preds.astype(int)), nmi_score(targets, preds), ari_score(targets, preds) 
+    # what is the cluster_acc? it is a function written in my utils files that I am trying to understand right now.
+    # what is the nemi score? sci learn function that i need to google to understand.
+        # it is called normalized_mutual_info_score on sci learn
+        # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.normalized_mutual_info_score.html
+        # Normalized Mutual Information (NMI) is a normalization of the Mutual Information (MI) score to scale 
+        # the results between 0 (no mutual information) and 1 (perfect correlation). In this function, mutual 
+        # information is normalized by some generalized mean of H(labels_true) and H(labels_pred)), defined by the average_method.
+        # This metric is independent of the absolute values of the labels: a permutation of the class or cluster label values 
+        # won’t change the score value in any way.
+    # what is the ari score? sci learn function that i need to google to understand.
+        # it is called adjusted_rand_score on sci learn
+        # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.adjusted_rand_score.html
+        # Rand index adjusted for chance.
+        # The Rand Index computes a similarity measure between two clusterings by considering all pairs of
+        # samples and counting pairs that are assigned in the same or different clusters in the predicted and true clusterings.
+        # The raw RI score is then “adjusted for chance” into the ARI score using the following scheme:
+        # ARI = (RI - Expected_RI) / (max(RI) - Expected_RI)
+        # The adjusted Rand index is thus ensured to have a value close to 0.0 for random labeling independently 
+        # of the number of clusters and samples and exactly 1.0 when the clusterings are identical (up to a permutation).
+        # Similarity score between -1.0 and 1.0.
+    # Another explaination 
+        # The Adjusted Rand score is introduced to determine whether two cluster results are similar to each other. 
+        # In the formula, the “RI” stands for the rand index, which calculates a similarity between two cluster results 
+        # by taking all points identified within the same cluster. This value is equal to 0 when points are assigned into 
+        # .clusters randomly and it equals to 1 when the two cluster results are same. 
+        # This metric is used to evaluate whether dimension-reduced similarity cluster results are similar to one other.
     print('Test acc {:.4f}, nmi {:.4f}, ari {:.4f}'.format(acc, nmi, ari))
     return preds 
 

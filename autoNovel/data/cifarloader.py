@@ -327,3 +327,8 @@ def CIFAR100LoaderTwoStream(root, batch_size, split='train',num_workers=2, aug=N
     loader.labeled_length = len(dataset_labeled)
     loader.unlabeled_length = len(dataset_unlabeled)
     return loader
+
+
+# if __name__ == '__main__':
+#         labeled_train_loader = CIFAR10Loader(root='./data/datasets/CIFAR/', batch_size=128, split='train', aug='once', shuffle=True, target_list = range(5))
+#         labeled_eval_loader = CIFAR10Loader(root='./data/datasets/CIFAR/', batch_size=128, split='test', aug=None, shuffle=False, target_list = range(5))
