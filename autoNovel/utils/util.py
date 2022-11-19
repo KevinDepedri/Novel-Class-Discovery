@@ -80,14 +80,15 @@ class BCE(nn.Module):
         # simi: 1->similar; -1->dissimilar; 0->unknown(ignore)
         assert len(prob1)==len(prob2)==len(simi), 'Wrong input size:{0},{1},{2}'.format(str(len(prob1)),str(len(prob2)),str(len(simi)))
         # make sure that everything has the same size
-        # are these tensors or what exactly???
-        P = prob1.mul_(prob2)
-        P = P.sum(1)# sum along axis
+        # are these tensors or what exactly??? yes they are all tensors 
+        P = prob1.mul_(prob2)#multiply(4624,5) by another matrix same size
+        P = P.sum(1)# sum along axis 1 so you have size fo 4624
+        # simi has shape as P 
+        # simi.eq(-1).type_as(P) reutnra tensor with 1 and zero at location where tnesor has value of -2
+        # you mulptily by simi then you add to it this tensor
         P.mul_(simi).add_(simi.eq(-1).type_as(P))
-        neglogP = -P.add_(BCE.eps).log_()
+        neglogP = -P.add_(BCE.eps).log_()#
         return neglogP.mean()
-# slowly we need to check it later
-# not very trival function
 def PairEnum(x,mask=None):
     # Enumerate all pairs of feature in x
     # x is a tensor of size 68,512 

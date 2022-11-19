@@ -67,24 +67,34 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
                 # in other words each vector is repeated 64 times then next vector repeat 64 times etc 
                 # [474, 307, 448,  ..., 370, 247, 245],
                 # [474, 307, 448,  ..., 370, 247, 245], keep on repeated for 64 times
-            rank_idx1, rank_idx2=rank_idx1[:, :args.topk], rank_idx2[:, :args.topk]
+            rank_idx1, rank_idx2=rank_idx1[:, :args.topk], rank_idx2[:, :args.topk]#you take top 5 so each has this size[4624,5]
             # what he is doing here ??? i am slicing specific amount topk. this is passed with arguments 
             rank_idx1, _ = torch.sort(rank_idx1, dim=1)
             # Sorts the elements of the input tensor along a given dimension in ascending order by value.
             rank_idx2, _ = torch.sort(rank_idx2, dim=1)
             # sorting the indicies
             rank_diff = rank_idx1 - rank_idx2# subtract both from each other 
-            rank_diff = torch.sum(torch.abs(rank_diff), dim=1)
+            rank_diff = torch.sum(torch.abs(rank_diff), dim=1)# 1 dimension shape 4624
+            # you summ alng top 5
             target_ulb = torch.ones_like(rank_diff).float().to(device) 
-            target_ulb[rank_diff>0] = -1 
+            # Return an array of ones with the same shape and type as a given array.
+            # Returns a tensor filled with the scalar value 1
 
-            prob1_ulb, _= PairEnum(prob2[~mask_lb]) 
-            _, prob2_ulb = PairEnum(prob2_bar[~mask_lb]) 
+            target_ulb[rank_diff>0] = -1 # put negative 1 at locations that has 0 or negative values 
+            #you are picking the unlabeled tensors using mask_lb
+            # prob2 is of the second head softmax output for first augmentation
+            prob1_ulb, _= PairEnum(prob2[~mask_lb]) # mask passed by none
+            # prob 2 is 128,5 but since u are passing ~mask_lb so you pass unlabled data so you get
+            # 68,5 prob1_ulb is the return of x1 which will be size of (4624.5)
+            # prob2_bar is of the second head softmax output for first augmentation
+            _, prob2_ulb = PairEnum(prob2_bar[~mask_lb]) # mask passed by none 
+            # prob2_ulb shape 4624 by 5 
 
-            loss_ce = criterion1(output1[mask_lb], label[mask_lb])
-            loss_bce = criterion2(prob1_ulb, prob2_ulb, target_ulb)
+            loss_ce = criterion1(output1[mask_lb], label[mask_lb])#cross entropy loss on labeled data
+            loss_bce = criterion2(prob1_ulb, prob2_ulb, target_ulb) # BCE in utils file
+            # target_ulb is matrix with 1 and -1 at values with rank diff less than or = 0
             consistency_loss = F.mse_loss(prob1, prob1_bar) + F.mse_loss(prob2, prob2_bar)
-            loss = loss_ce + loss_bce + w * consistency_loss 
+            loss = loss_ce + loss_bce + w * consistency_loss # summing up the losses
 
             loss_record.update(loss.item(), x.size(0))
             optimizer.zero_grad()
@@ -93,10 +103,10 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
         print('Train Epoch: {} Avg Loss: {:.4f}'.format(epoch, loss_record.avg))
         print('test on labeled classes')
         args.head = 'head1'
-        test(model, labeled_eval_loader, args)
+        test(model, labeled_eval_loader, args)# send to test set for evaluation
         print('test on unlabeled classes')
         args.head='head2'
-        test(model, unlabeled_eval_loader, args)
+        test(model, unlabeled_eval_loader, args)# send to test set for evaluation
 
 
 def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args):
@@ -134,8 +144,11 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
             prob1_ulb, _ = PairEnum(prob2[~mask_lb])
             _, prob2_ulb = PairEnum(prob2_bar[~mask_lb])
 
-            loss_ce = criterion1(output1[mask_lb], label[mask_lb])# crosss entropy loss
-
+            loss_ce = criterion1(output1[mask_lb], label[mask_lb])# crosss entropy loss for supervised part 
+            # all above very similar to before 
+            # the next part is the different part. 
+            # this is the different part for IL
+            
             label[~mask_lb] = (output2[~mask_lb]).detach().max(1)[1] + args.num_labeled_classes# 
 
             loss_ce_add = w * criterion1(output1[~mask_lb], label[~mask_lb]) / args.rampup_coefficient * args.increment_coefficient
@@ -156,11 +169,11 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
         args.head='head2'
         test(model, unlabeled_eval_loader, args)
 
-def test(model, test_loader, args):
+def test(model, test_loader, args):# normal test function you have seen similar to test in previous stages. i donot comment it
     model.eval()
     preds=np.array([])
     targets=np.array([])
-    for batch_idx, (x, label, _) in enumerate(tqdm(test_loader)):
+    for batch_idx, (x, label, _) in enumerate(tqdm(test_loader)):# we donot care about index 
         x, label = x.to(device), label.to(device)
         output1, output2, _ = model(x)
         if args.head=='head1':
