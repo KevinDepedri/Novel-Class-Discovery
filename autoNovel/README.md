@@ -30,20 +30,9 @@ We provide code and models for our experiments on CIFAR10, CIFAR100, SVHN,:
 
 ## Data preparation
 
-By default, we save trained models in `./data/experiments/` (soft link is suggested). You may also use any other directories you like by setting the `--dataset_root` argument to `/your/data/path/`, and the `--exp_root` argument to `/your/experiment/path/` when running all experiments below. **I mainly create a folder outside  the cloned directory and I pass it when running the code. For me this is much much better than before.**
+By default, we save trained models in `./data/experiments/` (soft link is suggested). You may also use any other directories you like by setting the `--dataset_root` argument to `/your/data/path/`, and the `--exp_root` argument to `/your/experiment/path/` when running all experiments below. 
 
 - For CIFAR-10, CIFAR-100, and SVHN, simply download the datasets and put into `./data/datasets/`.
-
-### Pretrained models
-
-We provide our trained models and all other required pretrained models. To download, run:
-
-```
-sh scripts/download_pretrained_models.sh
-```
-
-After downloading, you may directly jump to Step 3 below, if you only want to run our ranking based method. Remember it is better to move it in another folder and pass it when running the code
-
 Our code for step of self supervised learning is based on the official code of the [RotNet paper](https://arxiv.org/pdf/1803.07728.pdf).
 
 ## Step 1: Download datasets and weights
