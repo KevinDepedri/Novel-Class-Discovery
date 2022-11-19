@@ -14,27 +14,50 @@ from tqdm import tqdm
 import numpy as np
 import os
 ## starting the monster file. the hardest file
-
+# functions for training without incremental learning
 def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args):
     optimizer = SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
-    exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)
-    criterion1 = nn.CrossEntropyLoss() 
-    criterion2 = BCE() 
+    # the optimizier using sg and weight decay
+    exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)# the lr schedular
+    criterion1 = nn.CrossEntropyLoss() # cross entrop loss 
+    criterion2 = BCE() # this is binary cross entropy but he made the functions in the utils files.
+    # we should try to understand it as we go 
     for epoch in range(args.epochs):
-        loss_record = AverageMeter()
-        model.train()
-        exp_lr_scheduler.step()
-        w = args.rampup_coefficient * ramps.sigmoid_rampup(epoch, args.rampup_length) 
-        for batch_idx, ((x, x_bar),  label, idx) in enumerate(tqdm(train_loader)):
-            x, x_bar, label = x.to(device), x_bar.to(device), label.to(device)
-            output1, output2, feat = model(x)
-            output1_bar, output2_bar, _ = model(x_bar)
+        loss_record = AverageMeter()# average metter  we saw orevuiysky
+        model.train()# turning on training mode
+        exp_lr_scheduler.step()# each step for learning rate
+        # it makes a warning in here but no problem 
+        w = args.rampup_coefficient * ramps.sigmoid_rampup(epoch, args.rampup_length) # the takes the current epoch
+        # and the ramp up length it is set to 150
+        # what is w ? 
+        for batch_idx, ((x, x_bar),  label, idx) in enumerate(tqdm(train_loader)):# you pass mix data loader in here
+            # i am a bit lost here.
+            # what is x and x bar ???? my guess they are both same pictures but under different augmentation
+            # i am sure about this fact. so i take picture of car and augment it twice by doing RandomHorizontalFlip
+            # x is the label set and x bar is the unlabeled set
+            # 
+            x, x_bar, label = x.to(device), x_bar.to(device), label.to(device)# moving things to cuda
+            output1, output2, feat = model(x)# getting output of 2 head each 128,5
+            output1_bar, output2_bar, _ = model(x_bar)# getting output of 2 heads
             prob1, prob1_bar, prob2, prob2_bar=F.softmax(output1, dim=1),  F.softmax(output1_bar, dim=1), F.softmax(output2, dim=1), F.softmax(output2_bar, dim=1)
-
-            mask_lb = label<args.num_labeled_classes
-
-            rank_feat = (feat[~mask_lb]).detach()
-            rank_idx = torch.argsort(rank_feat, dim=1, descending=True)
+            # turning everything into probabilities
+            mask_lb = label<args.num_labeled_classes# mask of true and false checking which labels should have labels and which shouldnot
+            # feat is the layer before fully connected and it has shape of (128,512)
+            rank_feat = (feat[~mask_lb]).detach()# ~ is to turn each true to false as if it is flipping
+            # i am taking the all the unlabelled 
+            # Returns a new Tensor, detached from the current graph.
+            # The result will never require gradient.
+            # rank_feat are the unlabeled features
+            rank_idx = torch.argsort(rank_feat, dim=1, descending=True)# you have for example 68 unlabled point each of size of 512
+            # Returns the indices that sort a tensor along a given dimension in ascending order by value.
+            # for example rank_feat
+                # [0.4731, 0.6749, 0.1237,  ..., 0.0071, 0.0018, 0.0450],
+                # [0.4363, 0.6436, 0.1356,  ..., 0.0117, 0.0087, 0.0559],
+            # when we sort we say 
+                # [0, 0, 1,  ..., 1, 1, 1],
+                # [1,1, 0, 0.1237,  ..., 0, 0, 0],
+                # so in every picture we have feature vector flattened. we sort each value in all feature vectors and put ranking 
+                # according who is bigger than you. 
             rank_idx1, rank_idx2= PairEnum(rank_idx)
             rank_idx1, rank_idx2=rank_idx1[:, :args.topk], rank_idx2[:, :args.topk]
             rank_idx1, _ = torch.sort(rank_idx1, dim=1)
@@ -192,11 +215,17 @@ if __name__ == "__main__":
     # this will be very tricky many loaders so we better understand what is each loader doing. 
     if args.dataset_name == 'cifar10':
         mix_train_loader = CIFAR10LoaderMix(root=args.dataset_root, batch_size=args.batch_size, split='train', aug='twice', shuffle=True, labeled_list=range(args.num_labeled_classes), unlabeled_list=range(args.num_labeled_classes, num_classes))
+        # you ahve both labeled and unlabled dataset 
         labeled_train_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='train', aug='once', shuffle=True, target_list = range(args.num_labeled_classes))
+        # labeled dataset only
         unlabeled_eval_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='train', aug=None, shuffle=False, target_list = range(args.num_labeled_classes, num_classes))
+        # unlabled evaluation set
         unlabeled_eval_loader_test = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='test', aug=None, shuffle=False, target_list = range(args.num_labeled_classes, num_classes))
+        # unlabled test set
         labeled_eval_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='test', aug=None, shuffle=False, target_list = range(args.num_labeled_classes))
+        # labled test set
         all_eval_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='test', aug=None, shuffle=False, target_list = range(num_classes))
+        # contains both lableld and unlabled
     elif args.dataset_name == 'cifar100':
         mix_train_loader = CIFAR100LoaderMix(root=args.dataset_root, batch_size=args.batch_size, split='train', aug='twice', shuffle=True, labeled_list=range(args.num_labeled_classes), unlabeled_list=range(args.num_labeled_classes, num_classes))
         labeled_train_loader = CIFAR100Loader(root=args.dataset_root, batch_size=args.batch_size, split='train', aug='once', shuffle=True, target_list = range(args.num_labeled_classes))
@@ -211,21 +240,22 @@ if __name__ == "__main__":
         unlabeled_eval_loader_test = SVHNLoader(root=args.dataset_root, batch_size=args.batch_size, split='test', aug=None, shuffle=False, target_list = range(args.num_labeled_classes, num_classes))
         labeled_eval_loader = SVHNLoader(root=args.dataset_root, batch_size=args.batch_size, split='test', aug=None, shuffle=False, target_list = range(args.num_labeled_classes))
         all_eval_loader = SVHNLoader(root=args.dataset_root, batch_size=args.batch_size, split='test', aug=None, shuffle=False, target_list = range(num_classes))
-     
+     # entering training mode next 
     if args.mode == 'train':
-        if args.IL:
-            save_weight = model.head1.weight.data.clone()# create new head 1 we copy the weights
-            save_bias = model.head1.bias.data.clone()
-            model.head1 = nn.Linear(512, num_classes).to(device)
-            model.head1.weight.data[:args.num_labeled_classes] = save_weight
-            model.head1.bias.data[:] = torch.min(save_bias) - 1.
-            model.head1.bias.data[:args.num_labeled_classes] = save_bias
+        if args.IL:# this is code set to say hey do you want work with incremental learning or not 
+            save_weight = model.head1.weight.data.clone()# cloning the weights of the head 1 from supervised learning size 5 by 512 
+            save_bias = model.head1.bias.data.clone()# cloning the bias of the head 1 from supervised learning 
+            model.head1 = nn.Linear(512, num_classes).to(device)# replacing head from just 5 to 10 so now the size is 10,512 and all values are zero
+            model.head1.weight.data[:args.num_labeled_classes] = save_weight# intialize half matrix with the weights available previously
+            # from the supervised learning
+            model.head1.bias.data[:] = torch.min(save_bias) - 1. # the bias for the 10 classes is set to certain value
+            # the min of previous bias and we subtract from it -1
             train_IL(model, mix_train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
         else:
-            train(model, mix_train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
-        torch.save(model.state_dict(), args.model_dir)
+            train(model, mix_train_loader, labeled_eval_loader, unlabeled_eval_loader, args)# traiining without incrmenetal learning
+        torch.save(model.state_dict(), args.model_dir)# saving the model. 
         print("model saved to {}.".format(args.model_dir))
-    else:
+    else:# entering evaluation mode 
         print("model loaded from {}.".format(args.model_dir))
         if args.IL:
             model.head1 = nn.Linear(512, num_classes).to(device)

@@ -258,7 +258,7 @@ def CIFAR10Data(root, split='train', aug=None, target_list=range(5)):# this func
         ]))
     dataset = CIFAR10(root=root, split=split, transform=transform, target_list=target_list)
     return dataset
-
+# used for supervised and autonovel
 def CIFAR10Loader(root, batch_size, split='train', num_workers=2,  aug=None, shuffle=True, target_list=range(5)):# it gets called in supervised learning
     dataset = CIFAR10Data(root, split, aug,target_list)# for supervised learning augmentation is set to once
     loader = data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
@@ -292,8 +292,13 @@ def CIFAR10LoaderMix(root, batch_size, split='train',num_workers=2, aug=None, sh
     # so you have 2 dataset for both labeled and unlabled
     if new_labels is not None:# we can pass some specific labels i donot know why but we can
         dataset_unlabeled.targets = new_labels
-    dataset_labeled.targets = np.concatenate((dataset_labeled.targets,dataset_unlabeled.targets))
-    dataset_labeled.data = np.concatenate((dataset_labeled.data,dataset_unlabeled.data),0)# axis is set to 0 so along first direciton
+    # dataset_labeled.targets has size of 25000
+    # dataset_unlabeled.targets has size of 25000
+    # dataset_labeled.data has size of (25000, 32, 32, 3)
+    # dataset_unlabeled.data has size of (25000, 32, 32, 3)
+    dataset_labeled.targets = np.concatenate((dataset_labeled.targets,dataset_unlabeled.targets))# the labels with numpy size of (50000,)
+    dataset_labeled.data = np.concatenate((dataset_labeled.data,dataset_unlabeled.data),0)# numpy array of size of (50000, 32, 32, 3)
+    # first half is labled and second half is unlabled
     loader = data.DataLoader(dataset_labeled, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     return loader
 

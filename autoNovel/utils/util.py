@@ -87,6 +87,7 @@ class BCE(nn.Module):
         neglogP = -P.add_(BCE.eps).log_()
         return neglogP.mean()
 # slowly we need to check it later
+# not very trival function
 def PairEnum(x,mask=None):
     # Enumerate all pairs of feature in x
     assert x.ndimension() == 2, 'Input dimension must be 2'
