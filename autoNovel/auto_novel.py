@@ -177,12 +177,13 @@ if __name__ == "__main__":
         os.makedirs(model_dir)# create the folder
     args.model_dir = model_dir+'/'+'{}.pth'.format(args.model_name) # the name that we will save the model with 
 
-    model = ResNet(BasicBlock, [2,2,2,2], args.num_labeled_classes, args.num_unlabeled_classes).to(device)# we have 2 heads , label head and unlabled head
+    model = ResNet(BasicBlock, [2,2,2,2], args.num_labeled_classes, args.num_unlabeled_classes).to(device)
+    # we have 2 heads , label head and unlabled head
 
     num_classes = args.num_labeled_classes + args.num_unlabeled_classes # total number of classes.
 
     if args.mode=='train':# if we are in training mood.
-        state_dict = torch.load(args.warmup_model_dir)# load the training weights
+        state_dict = torch.load(args.warmup_model_dir)# load the training weights for supervised learning part 
         model.load_state_dict(state_dict, strict=False)
         for name, param in model.named_parameters(): 
             if 'head' not in name and 'layer4' not in name:

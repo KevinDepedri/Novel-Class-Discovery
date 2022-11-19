@@ -94,6 +94,7 @@ class CIFAR10(data.Dataset):
                 if 'labels' in entry:
                     self.targets.extend(entry['labels'])
                 else:
+                    # i donto understand what is happening in here but the code was always here
                     #  self.targets.extend(entry['coarse_labels'])
                     self.targets.extend(entry['fine_labels'])
 
@@ -121,6 +122,7 @@ class CIFAR10(data.Dataset):
                 data = pickle.load(infile, encoding='latin1')
             self.classes = data[self.meta['key']]
         self.class_to_idx = {_class: i for i, _class in enumerate(self.classes)}
+        # this commented part bellow was always in the code i donot know what is meant in here
         #  x = self.class_to_idx
         #  sorted_x = sorted(x.items(), key=lambda kv: kv[1])
         #  print(sorted_x)
@@ -223,7 +225,7 @@ def CIFAR10Data(root, split='train', aug=None, target_list=range(5)):# this func
             # Normalize a tensor image with mean and standard deviation.  my question is from where did he get this values 
             # i donot understand to be honest
         ])
-    elif aug=='twice':
+    elif aug=='twice':# you are using random translateion with reflect  with random hoirozntal flip
         transform = TransformTwice(transforms.Compose([
             RandomTranslateWithReflect(4),
             transforms.RandomHorizontalFlip(),
@@ -237,7 +239,7 @@ def CIFAR10Loader(root, batch_size, split='train', num_workers=2,  aug=None, shu
     dataset = CIFAR10Data(root, split, aug,target_list)# for supervised learning augmentation is set to once
     loader = data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     return loader
-
+# used with auto class discovered
 def CIFAR10LoaderMix(root, batch_size, split='train',num_workers=2, aug=None, shuffle=True, labeled_list=range(5), unlabeled_list=range(5, 10), new_labels=None):
     if aug==None:
         transform = transforms.Compose([
@@ -253,13 +255,15 @@ def CIFAR10LoaderMix(root, batch_size, split='train',num_workers=2, aug=None, sh
         ])
     elif aug=='twice':
         transform = TransformTwice(transforms.Compose([
-            RandomTranslateWithReflect(4),
-            transforms.RandomHorizontalFlip(),
+            RandomTranslateWithReflect(4),# this is a function in the utils files that I need to understand what is doing in here :(
+            transforms.RandomHorizontalFlip(),# part of pytorch 
             transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-        ]))
-    dataset_labeled = CIFAR10(root=root, split=split, transform=transform, target_list=labeled_list)
-    dataset_unlabeled = CIFAR10(root=root, split=split, transform=transform, target_list=unlabeled_list)
+        ]))# you apply this specific transformation for mix_train_loader for auto novel class discovery
+        # you call the cifar10 object which is a class in here. 
+    dataset_labeled = CIFAR10(root=root, split=split, transform=transform, target_list=labeled_list)# the first 5 classes
+    dataset_unlabeled = CIFAR10(root=root, split=split, transform=transform, target_list=unlabeled_list)# the last 5 classes
+    # what does this cifar10 object does ???
     if new_labels is not None:
         dataset_unlabeled.targets = new_labels
     dataset_labeled.targets = np.concatenate((dataset_labeled.targets,dataset_unlabeled.targets))
@@ -327,8 +331,3 @@ def CIFAR100LoaderTwoStream(root, batch_size, split='train',num_workers=2, aug=N
     loader.labeled_length = len(dataset_labeled)
     loader.unlabeled_length = len(dataset_unlabeled)
     return loader
-
-
-# if __name__ == '__main__':
-#         labeled_train_loader = CIFAR10Loader(root='./data/datasets/CIFAR/', batch_size=128, split='train', aug='once', shuffle=True, target_list = range(5))
-#         labeled_eval_loader = CIFAR10Loader(root='./data/datasets/CIFAR/', batch_size=128, split='test', aug=None, shuffle=False, target_list = range(5))
