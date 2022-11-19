@@ -57,13 +57,23 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
                 # [0, 0, 1,  ..., 1, 1, 1],
                 # [1,1, 0, 0.1237,  ..., 0, 0, 0],
                 # so in every picture we have feature vector flattened. we sort each value in all feature vectors and put ranking 
-                # according who is bigger than you. 
-            rank_idx1, rank_idx2= PairEnum(rank_idx)
+                # according who is bigger than you.
+            # rank_idx is size of (68 by 512)
+            rank_idx1, rank_idx2= PairEnum(rank_idx)# mask is set to none
+            # rank_idx1 (4624,512) repeated variable. imagine that you have 68 pictures features and we repeats them 68 times
+            # so all the whole variable is copied and put 64 times.
+            # rank_idx2. each feature vector size 512 i repeat it 68 times so i have (68,34816)=(68,68*512). then
+                # i reshape it to (-1,512) so that the final vector becomes  size of [4624, 512]
+                # in other words each vector is repeated 64 times then next vector repeat 64 times etc 
+                # [474, 307, 448,  ..., 370, 247, 245],
+                # [474, 307, 448,  ..., 370, 247, 245], keep on repeated for 64 times
             rank_idx1, rank_idx2=rank_idx1[:, :args.topk], rank_idx2[:, :args.topk]
+            # what he is doing here ??? i am slicing specific amount topk. this is passed with arguments 
             rank_idx1, _ = torch.sort(rank_idx1, dim=1)
+            # Sorts the elements of the input tensor along a given dimension in ascending order by value.
             rank_idx2, _ = torch.sort(rank_idx2, dim=1)
-
-            rank_diff = rank_idx1 - rank_idx2
+            # sorting the indicies
+            rank_diff = rank_idx1 - rank_idx2# subtract both from each other 
             rank_diff = torch.sum(torch.abs(rank_diff), dim=1)
             target_ulb = torch.ones_like(rank_diff).float().to(device) 
             target_ulb[rank_diff>0] = -1 

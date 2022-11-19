@@ -90,10 +90,21 @@ class BCE(nn.Module):
 # not very trival function
 def PairEnum(x,mask=None):
     # Enumerate all pairs of feature in x
+    # x is a tensor of size 68,512 
+    #68 indicate number of pictures
+    # in the end what you are passing is the ranking of the features 
     assert x.ndimension() == 2, 'Input dimension must be 2'
     x1 = x.repeat(x.size(0),1)
+    # Repeats this tensor along the specified dimensions. this function copies the tensor’s data.
+    # you passs inside the number of times to repeat this tensor along each dimension
+    # the 1 indicate the dimension that you repeat the data on 
+    # you have 68 instance each instance so you will repeat the data 68*68
+    # end output will be size of (4624,512)=(68*68,512)
     x2 = x.repeat(1,x.size(0)).view(-1,x.size(1))
-    if mask is not None:
+    # i repeating again this time i want to repeat 1 time along axis of
+    # so what i do is that I take 1 tensor size 512 and i repeat it 64 times 
+    # so size is (68,34816)
+    if mask is not None:# this part will be skipped  as mask is none
         xmask = mask.view(-1,1).repeat(1,x.size(1))
         #dim 0: #sample, dim 1:#feature 
         x1 = x1[xmask].view(-1,x.size(1))
