@@ -120,8 +120,7 @@ class CIFAR10(data.Dataset):# this is class dataset
         ind = [i for i in range(len(self.targets)) if self.targets[i] in target_list]
         # the ind in here is used  as following
         # for length of targets which contains the labels. it is a list
-        # if targets is within targetlist(do you remember target list is where 
-        # we say i want to be between class 0 to 5 )
+        # if targets is within targetlist(do you remember target list is where we say i want to be between class 0 to 5 )
         self.data = self.data[ind]# we are slicing the data to contain only the things in my targetlist
         self.targets = np.array(self.targets)# turning it to numpy array to slice it
         self.targets = self.targets[ind].tolist()# turning it back to list
@@ -247,8 +246,11 @@ def CIFAR10Data(root, split='train', aug=None, target_list=range(5)):# this func
             transforms.ToTensor(),# turning it to tensor
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
             # Normalize a tensor image with mean and standard deviation.  my question is from where did he get this values 
-            # i donot understand to be honest
+            # i donot get from where does he got this values ? the std one are not the same to the computed ones
         ])
+        # values from mean  [0.4913725490196078, 0.4823529411764706, 0.4466666666666667] the mean is the same  but the std is different
+        # values from std [0.24705882352941178, 0.24352941176470588, 0.2615686274509804] but the std is different
+        # it is not important either way now. 
     elif aug=='twice':# you are using random translateion with reflect  with random hoirozntal flip
         transform = TransformTwice(transforms.Compose([
             RandomTranslateWithReflect(4),
@@ -260,7 +262,8 @@ def CIFAR10Data(root, split='train', aug=None, target_list=range(5)):# this func
     return dataset
 # used for supervised and autonovel
 def CIFAR10Loader(root, batch_size, split='train', num_workers=2,  aug=None, shuffle=True, target_list=range(5)):# it gets called in supervised learning
-    dataset = CIFAR10Data(root, split, aug,target_list)# for supervised learning augmentation is set to once
+    # targetlist usually contains range for num_labeled_classes. so if i am training from class 0 to 5 then i expect labels to be [0,1,2,3,4,5] VA BENE? 
+    dataset = CIFAR10Data(root, split, aug,target_list)# for supervised learning augmentation augmentation is set to once
     loader = data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     return loader
 # used with auto class discovery

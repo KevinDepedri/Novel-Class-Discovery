@@ -11,24 +11,28 @@ from data.svhnloader import SVHNLoader
 from tqdm import tqdm
 import numpy as np
 import os
-# 
+# What section is talking about this part???
+# still 2.1 hahahahahahhaha very funny right
+# for real it is The function ηl ◦ Φ is fine-tuned on the labelled dataset Dl in order to learn a classifier for the Cl known classes,
+# this time using the labels yi and optimizing the standard cross-entropy (CE) loss:
+# Only ηl and the last macro-block of Φ (section 3) are updated in order to avoid overfitting the representation to the labelled data.
+# what he is trying to say is that we freeze the first 3 block and fin tune last block with the classifier in supervised learning setting
 def train(model, train_loader, labeled_eval_loader, args):
     optimizer = SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)# just a normal sgd with momentum
     # with weight decay 
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)#Decays the learning rate of each 
     #parameter group by gamma every step_size epochs. 
-    # Notice that such decay can happen simultaneously with other changes to the learning rate from outside this scheduler
     criterion1 = nn.CrossEntropyLoss() # our beautiful cross entropy losss
     for epoch in range(args.epochs):
         loss_record = AverageMeter()# our average meeting for the loss. WHy no average metter for accuracy ???
         model.train()
         exp_lr_scheduler.step()
         for batch_idx, (x, label, idx) in enumerate(tqdm(train_loader)):# only use label data to train the model
-            # dataloader contain 3 things
+            # dataloader contain 3 things index label and x 
             x, label = x.to(device), label.to(device)
-            output1, _, _ = model(x)# returns output 1 for first head,output 2 for second head, output 3 which is outptu before heads
+            output1, _, _ = model(x)# returns output 1 for first head,output 2 for second head, output 3 features before the head but we donot use it 
             # my guess i am trainingi supervised ehre so i donot care about unsupervised head.
-            loss= criterion1(output1, label)
+            loss= criterion1(output1, label)# cross entropy loss
             loss_record.update(loss.item(), x.size(0))# record the loss term
             optimizer.zero_grad()# zeroing the gradients
             loss.backward()# loss backward step
@@ -38,7 +42,9 @@ def train(model, train_loader, labeled_eval_loader, args):
         args.head = 'head1'# we are setting that we want head number 1 to be tested and also this head is trained supervised.
         # other head until the current momemt it is useless.
         test(model, labeled_eval_loader, args)# run a test 
-
+# the question is why are we calculating accuracy of clusters in here??
+# i donot understand to be honest
+# why do we heave the second head of unlabled data in here???
 def test(model, test_loader, args):
     model.eval() # turn model to evaluation 
     preds=np.array([])# numpy array for predictions
@@ -62,7 +68,7 @@ def test(model, test_loader, args):
         preds=np.append(preds, pred.cpu().numpy())
         # very similar thing is happening in here.
     acc, nmi, ari = cluster_acc(targets.astype(int), preds.astype(int)), nmi_score(targets, preds), ari_score(targets, preds) 
-    # what is the cluster_acc? it is a function written in my utils files that I am trying to understand right now.
+    # what is the cluster_acc? it is a function written in my utils files 
     # what is the nemi score? sci learn function that i need to google to understand.
         # it is called normalized_mutual_info_score on sci learn
         # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.normalized_mutual_info_score.html
@@ -108,11 +114,11 @@ if __name__ == "__main__":
             description='cluster',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--lr', type=float, default=0.1)# the learning ratte
-    parser.add_argument('--gamma', type=float, default=0.5)# what is gamma? check the paper i guess it is for the schedule :P
+    parser.add_argument('--gamma', type=float, default=0.5)# what is gamma? it is for the schedule parameter :P
     parser.add_argument('--momentum', type=float, default=0.9)# momentum term of optimzieer
     parser.add_argument('--weight_decay', type=float, default=1e-4)# weight decay
     parser.add_argument('--epochs', default=100, type=int)# run for 100 epochs
-    parser.add_argument('--step_size', default=10, type=int)# what is the step size????
+    parser.add_argument('--step_size', default=10, type=int)# what is the step size???? it is also for schedular
     parser.add_argument('--batch_size', default=128, type=int)# batch size
     parser.add_argument('--num_unlabeled_classes', default=5, type=int)# number of unlabled classes
     parser.add_argument('--num_labeled_classes', default=5, type=int)# number of lableled classes
@@ -137,13 +143,13 @@ if __name__ == "__main__":
     num_classes = args.num_labeled_classes + args.num_unlabeled_classes# total number of classes.
 
     state_dict = torch.load(args.rotnet_dir)# laod from pre weights
+    # he deleted the old head
     del state_dict['linear.weight']# just used for training annotation head. size is [4,512]
     del state_dict['linear.bias']# deleted the weights. [4]
     # he is deleted the of the linear part of the rot net
     # after this operation it is as if you no longer have any weights or biases in the end. they are completely deleted
     model.load_state_dict(state_dict, strict=False)#  whether to strictly enforce that the keys in state_dict match 
-    # the keys returned by this module’s state_dict() function. It has to be not stricted because they donot maatch. 
-    # the model in here has 2 extra heads while the semisupervised learning module contains no heads but everything else is the same
+        # the model in here has 2 extra heads while the semisupervised learning module contains no heads but everything else is the same
     for name, param in model.named_parameters(): 
         if 'head' not in name and 'layer4' not in name:# in here we are setting some paramters that shouldnot be trained
             # so the heads should be trained
@@ -152,7 +158,8 @@ if __name__ == "__main__":
             param.requires_grad = False
     #they only train layers after layer 4. parameters before are fixed.
     # annotation head to learn low level representation. 
-    # amazing i am lost but not important haahhaa
+    # cifar 10loader is super super commented. i would suggest that you look to it if you want to understand what is heppening inside
+    # else it just a cute data loader. nothing so special.
     if args.dataset_name == 'cifar10':
         labeled_train_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='train', aug='once', shuffle=True, target_list = range(args.num_labeled_classes))
         labeled_eval_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='test', aug=None, shuffle=False, target_list = range(args.num_labeled_classes))
@@ -173,3 +180,5 @@ if __name__ == "__main__":
     print('test on labeled classes')
     args.head = 'head1'
     test(model, labeled_eval_loader, args)# testing on the lableed data set 
+    # you are evaluating data points that are labeled first 5 classes
+    

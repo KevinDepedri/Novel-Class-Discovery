@@ -114,32 +114,35 @@ def PairEnum(x,mask=None):
 
 def accuracy(output, target, topk=(1,)):
     """Computes the accuracy over the k top predictions for the specified values of k"""
-    with torch.no_grad():
+    with torch.no_grad():# donot use gradients in this area
         maxk = max(topk)# if topk(1,) so maxk is set to 1
-        batch_size = target.size(0)# set to 256
+        batch_size = target.size(0)# set to 256 which indicate my batch size 
         # output is a tensor (256,4)
         _, pred = output.topk(maxk, 1, True, True)#shape of pred is (1,256), pred is the index we are returning the index
-        # Returns the k largest elements of the given input tensor along a given dimension.
+        # topk Returns the k largest elements of the given input tensor along a given dimension.
         # torch.topk(input, k, dim=None, largest=True, sorted=True, *, out=None)
-        # k the k in “top-k”
-        # dim the dimension to sort along
-        pred = pred.t()# shape is (1,256) # why didnot it change shape after transpose? double check ?
+        # k the k in “top-k” which is topk
+        # dim the dimension to sort along which is 1
+        # this means that pred has size of (256,1) each element has value of what does network 
+        # predicts roatation here. so for first sample it predict 90 second sample it predice 180
+        # etc etc
+        
+        pred = pred.t()# shape is changed to (1,256)
         # we do the transpose operation.
         # Expects input to be <= 2-D tensor and transposes dimensions 0 and 1.
 
         # target has shape of 256 so we make target.view to turn it to (1,256)
         correct = pred.eq(target.view(1, -1).expand_as(pred))# [1,256]
         # Expand this tensor to the same size as other. self.expand_as(other) is equivalent to self.expand(other.size()).
-        # i donot get why in here he uses the expand operations but for semi supervised learning , it doesnot patter
+        # i donot get why in here he uses the expand operations but for semi supervised learning , it doesnot patter this operation
         # pred.eq Computes element-wise equality
-        # it has output shape of 1,256
-
-
-
+        # it has output shape of (1,256) it is filled with true and falses. indicating where  predict and target where correct 
         res = []
         for k in topk:# k is equal to 1
+            # you turn true and false matrix into numbers and you sum it all
             correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)# you reshape to (256) and you summ them all
             res.append(correct_k.mul_(100.0 / batch_size))# divided by batch size while mutlipl by 100
+        # it is like you are averaging and calculating the accuracy.
         return res
 # setting seed to something very specfic 
 def seed_torch(seed=1029):
