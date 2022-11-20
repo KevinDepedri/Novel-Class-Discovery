@@ -6,7 +6,7 @@ if __name__ == '__main__':
         # labeled_train_loader = CIFAR10Loader(root='./data/datasets/CIFAR/', batch_size=128, split='train', aug='once', shuffle=True, target_list = range(5))
         # labeled_eval_loader = CIFAR10Loader(root='./data/datasets/CIFAR/', batch_size=128, split='test', aug=None, shuffle=False, target_list = range(5))
         mix_train_loader = CIFAR10LoaderMix(root='./data/datasets/CIFAR/', batch_size=128, split='train', aug='twice', shuffle=True, labeled_list=range(5), unlabeled_list=range(5, 10))
-        print(len(mix_train_loader))# we have 391 batches
+        print("The size of train loader is -->"+str(len(mix_train_loader)))# we have 391 batches
         iterator=iter(mix_train_loader)
         inputs = next(iterator)
         # print(type(inputs))# the type is list
@@ -15,7 +15,8 @@ if __name__ == '__main__':
         # print((inputs[0]))#the picture
         # so in here we have 2 pictures
         # but why 2 pictures ????
-        print(inputs[0][0].shape)# tensor with size of 128,3,32,32
+        print('the shape of inputs[0][0] is '+str(len(inputs[0])))# this is a list of size 2
+        print('the shape of inputs[0][0] is '+str(inputs[0][0].shape))# tensor with size of 128,3,32,32
         print(type(len(inputs[0])))#int
         import matplotlib.pyplot as plt
         import numpy as np 

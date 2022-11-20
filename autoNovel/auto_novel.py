@@ -14,6 +14,7 @@ from tqdm import tqdm
 import numpy as np
 import os
 ## starting the monster file. the hardest file
+# i hate this file so much. meow meow ❤️❤️❤️❤️❤️❤️❤️❤️
 # functions for training without incremental learning
 def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args):
     optimizer = SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
@@ -199,15 +200,15 @@ if __name__ == "__main__":
     parser.add_argument('--epochs', default=200, type=int)# the number of epochs that we run during traininnig
     parser.add_argument('--rampup_length', default=150, type=int)# the length of rampup that is passed to ramps.py functioncts 
     parser.add_argument('--rampup_coefficient', type=float, default=50)# rampup coefficieints
-    parser.add_argument('--increment_coefficient', type=float, default=0.05)# what is this ?
-    parser.add_argument('--step_size', default=170, type=int)# what is the step size it is used with learnign rate schedule
+    parser.add_argument('--increment_coefficient', type=float, default=0.05)# some cofficient related to incremental learning 
+    parser.add_argument('--step_size', default=170, type=int)#  it is used with learnign rate schedule
     parser.add_argument('--batch_size', default=128, type=int)# the batch size used 
     parser.add_argument('--num_unlabeled_classes', default=5, type=int)# the number of unlabled classes
     parser.add_argument('--num_labeled_classes', default=5, type=int)# the number of labled classes
     parser.add_argument('--dataset_root', type=str, default='./data/datasets/CIFAR/')# the root directoryyy
     parser.add_argument('--exp_root', type=str, default='./data/experiments/')# where i save my experiements
     parser.add_argument('--warmup_model_dir', type=str, default='./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth')#the supervised model saved from step 2 
-    parser.add_argument('--topk', default=5, type=int)# interesting what is topk? 
+    parser.add_argument('--topk', default=5, type=int)# interesting what is topk? it is realted to size of comparision 
     parser.add_argument('--IL', action='store_true', default=False, help='w/ incremental learning')# turning on the incremental leanring feature
     parser.add_argument('--model_name', type=str, default='resnet')# the name of model
     parser.add_argument('--dataset_name', type=str, default='cifar10', help='options: cifar10, cifar100, svhn')# the dataset what we will work on
@@ -236,9 +237,12 @@ if __name__ == "__main__":
                 param.requires_grad = False# anything before layer 4 is fixed 
     # we fix paramters before layer 4
     # this will be very tricky many loaders so we better understand what is each loader doing. 
+    # i am scareddddd 
     if args.dataset_name == 'cifar10':
         mix_train_loader = CIFAR10LoaderMix(root=args.dataset_root, batch_size=args.batch_size, split='train', aug='twice', shuffle=True, labeled_list=range(args.num_labeled_classes), unlabeled_list=range(args.num_labeled_classes, num_classes))
+        # mix traing loader has some important comments i should tell you. it can help make ur life easier 
         # you ahve both labeled and unlabled dataset 
+        # it is in format of ((picture1,picture2),label,index) where picture 1 and picture 2 are same picture but there is auggmentiaton applied to picture 2
         labeled_train_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='train', aug='once', shuffle=True, target_list = range(args.num_labeled_classes))
         # labeled dataset only
         unlabeled_eval_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='train', aug=None, shuffle=False, target_list = range(args.num_labeled_classes, num_classes))

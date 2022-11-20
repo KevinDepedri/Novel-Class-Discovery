@@ -32,7 +32,7 @@ def cluster_acc(y_true, y_pred):
     """
     # ytrue is an array of size 5000 containing all the test data
     y_true = y_true.astype(np.int64)
-    assert y_pred.size == y_true.size # check that predict and true has teh same dimensions
+    assert y_pred.size == y_true.size # check that predict and true has the same dimensions
     D = max(y_pred.max(), y_true.max()) + 1 #extrats value 5 Extract the size of the matrix. 
     # extract maximum from ypred and extract maximum from ytrue and pick the max of both then add 1
     w = np.zeros((D, D), dtype=np.int64)# create a matrix D by d filled with zeros
@@ -40,16 +40,25 @@ def cluster_acc(y_true, y_pred):
     for i in range(y_pred.size):# for the full size of the test set.
         w[y_pred[i], y_true[i]] += 1# he is just filling up the matrix
         # this matrix is what? THE AMAZING CONFUSION MATRIXXX. It took me sometimes to figure it out.
+        # think of it  on x axis you have y predict class
+        # on y axsis you have the y true classes.
+        # so every item i predicted class 1 and it is class 1 i add 1 
     # 
     ind = linear_assignment(w.max() - w)# i donot quite get why he is doing in here??? why subtract the maxx? 
     # he takes a matrix that is called w and apply on it the max operation.  so you get the maximum number in all of the matrices.
     # so for example if your matrix contain biggeest number equal to 10, he subtract 10 out of everything else and input it to linear
-    # assigment
+    # linear assigment
     # it returns The pairs of (row, col) indices in the original array giving the original ordering. 
     return sum([w[i, j] for i, j in ind]) * 1.0 / y_pred.size # he bring out the solution with least cost and we add all the cost
     # what does this mean???
-    # why is hungarian algorithim used on the confusion matrix? is it a confusion matrix??? maybe i should ask zhong.
-
+    # jacopo the genius figured it out. ask him. i give him some credit. 
+    # the hungarian algorithim is about find least cost to a problem
+    # imagine you have 3 people sick in different places in trento  and there are 3 ambulences in trento
+    # which ambuluence go to which person? there is a different expense for every ambulence if it go to specific person
+    # so ambulence A if go to person 1, cost is 100.if go to person 2, cost is 600.if go to person 3, cost is 30.
+    # similar situation for the other ambulences. 
+    # hungarian algorithim will give you solution to which ambulence go to which person to decrease the cost while being computationally not expensive.
+    # in this case you have predicted labels and true label and you are trying to say how much do we assign this cluster this specific label(y_true).
 class AverageMeter(object):
     """Computes and stores the average and current value"""
     def __init__(self):

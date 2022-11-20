@@ -45,6 +45,9 @@ def train(model, train_loader, labeled_eval_loader, args):
 # the question is why are we calculating accuracy of clusters in here??
 # i donot understand to be honest
 # why do we heave the second head of unlabled data in here???
+# i am not sure but he is computing this to see how much is labeled data are clustered well.
+# the idea is that there is no loss here punishing for the bad clustering. it doesnot affect the training.
+# why not just put 1 head in here instead of 2????i donot know 
 def test(model, test_loader, args):
     model.eval() # turn model to evaluation 
     preds=np.array([])# numpy array for predictions

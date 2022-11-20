@@ -284,13 +284,17 @@ def CIFAR10LoaderMix(root, batch_size, split='train',num_workers=2, aug=None, sh
         transform = TransformTwice(transforms.Compose([
             RandomTranslateWithReflect(4),# this is a function in the utils files. i think it is commented above the funciton some informaiton of what it does
             # i donot want divide so deep in understanding how it works because it is not necessarly 
-            # 
+            # it relects the picture . so oyu have 2 pictures notj ust 1 
             transforms.RandomHorizontalFlip(),# part of pytorch 
             transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
         ]))# you apply this specific transformation for mix_train_loader for auto novel class discovery
         # you call the cifar10 object which is a class in here. 
     dataset_labeled = CIFAR10(root=root, split=split, transform=transform, target_list=labeled_list)# the first 5 classes
+    # dataset_labeled[0] is a tuple containing 3 things
+    # first it has tuple containing 2 tensor of (3,32,32) because each tuple is repeated twice with augmentation
+    # second it has class label as an integer
+    # third it has index of the picture
     dataset_unlabeled = CIFAR10(root=root, split=split, transform=transform, target_list=unlabeled_list)# the last 5 classes
     # so you have 2 dataset for both labeled and unlabled
     if new_labels is not None:# we can pass some specific labels i donot know why but we can
