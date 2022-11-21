@@ -181,10 +181,16 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
             # all above very similar to before 
             # the next part is the different part. 
             # this is the different part for IL
-            
-            label[~mask_lb] = (output2[~mask_lb]).detach().max(1)[1] + args.num_labeled_classes# 
-
+            # mask_lb used to access unlabeled stuff. 
+            # (output2[~mask_lb]).detach().max(1)[1] you have 62*5 tensor you removed gradient return biggest tensor. but I want to return the index of biggest not the values
+            # so i expect to ahve valeus between 0 to 5 then i add 5 so i get the new labeled of unlabled class to be 
+            # 
+            label[~mask_lb] = (output2[~mask_lb]).detach().max(1)[1] + args.num_labeled_classes#5 + 
+            # calculating loss entropy between otuput 1 and labels pseudo 
+            # , for the unlabelled data we use the pseudo-labels ˆ yu i , which are generated on-the-fly from the head ηu at each forward pass
             loss_ce_add = w * criterion1(output1[~mask_lb], label[~mask_lb]) / args.rampup_coefficient * args.increment_coefficient
+            # i donot understand why  dividie by ramp cofficieint and increment cofficient 
+            # everything normal 
             loss_bce = criterion2(prob1_ulb, prob2_ulb, target_ulb)#binary cross entropy
             consistency_loss = F.mse_loss(prob1, prob1_bar) + F.mse_loss(prob2, prob2_bar)# between label data or unlabled data 
 
@@ -241,7 +247,7 @@ if __name__ == "__main__":
     parser.add_argument('--exp_root', type=str, default='./data/experiments/')# where i save my experiements
     parser.add_argument('--warmup_model_dir', type=str, default='./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth')#the supervised model saved from step 2 
     parser.add_argument('--topk', default=5, type=int)# interesting what is topk? it is realted to size of comparision 
-    parser.add_argument('--IL', action='store_true', default=False, help='w/ incremental learning')# turning on the incremental leanring feature
+    parser.add_argument('--IL', action='store_true', default=True, help='w/ incremental learning')# turning on the incremental leanring feature
     parser.add_argument('--model_name', type=str, default='resnet')# the name of model
     parser.add_argument('--dataset_name', type=str, default='cifar10', help='options: cifar10, cifar100, svhn')# the dataset what we will work on
     parser.add_argument('--seed', default=1, type=int)# specific seed that we set in the beinging
