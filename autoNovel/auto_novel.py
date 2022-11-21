@@ -22,78 +22,110 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)# the lr schedular
     criterion1 = nn.CrossEntropyLoss() # cross entrop loss 
     criterion2 = BCE() # this is binary cross entropy but he made the functions in the utils files.
-    # we should try to understand it as we go 
     for epoch in range(args.epochs):
-        loss_record = AverageMeter()# average metter  we saw orevuiysky
+        loss_record = AverageMeter()# average metter  we saw previously
         model.train()# turning on training mode
         exp_lr_scheduler.step()# each step for learning rate
         # it makes a warning in here but no problem 
         w = args.rampup_coefficient * ramps.sigmoid_rampup(epoch, args.rampup_length) # the takes the current epoch
         # and the ramp up length it is set to 150
-        # what is w ? 
+        # what is w ? it is used to weight the loss later.
         for batch_idx, ((x, x_bar),  label, idx) in enumerate(tqdm(train_loader)):# you pass mix data loader in here
-            # i am a bit lost here.
             # what is x and x bar ???? my guess they are both same pictures but under different augmentation
-            # i am sure about this fact. so i take picture of car and augment it twice by doing RandomHorizontalFlip
-            # x is the label set and x bar is the unlabeled set
-            # 
+            # i am sure about this fact. so i take picture of car and augment it twice by doing RandomHorizontalFlip            
             x, x_bar, label = x.to(device), x_bar.to(device), label.to(device)# moving things to cuda
-            output1, output2, feat = model(x)# getting output of 2 head each 128,5
-            output1_bar, output2_bar, _ = model(x_bar)# getting output of 2 heads
+            output1, output2, feat = model(x)# getting output of 2 head each 128,5.
+            # output1 output from head 1
+            # output2 output from head 2
+            # feat feature vector before the MLP
+            # take care that all of the above is containing both labeled and unlabled data and we need to work with unlableled data.
+            output1_bar, output2_bar, _ = model(x_bar)# getting output of 2 heads each 128,5
             prob1, prob1_bar, prob2, prob2_bar=F.softmax(output1, dim=1),  F.softmax(output1_bar, dim=1), F.softmax(output2, dim=1), F.softmax(output2_bar, dim=1)
             # turning everything into probabilities
             mask_lb = label<args.num_labeled_classes# mask of true and false checking which labels should have labels and which shouldnot
+            #  mask_lb has size of [128] 
+            # labled classes has True and unlbaleled flassess has falses
             # feat is the layer before fully connected and it has shape of (128,512)
             rank_feat = (feat[~mask_lb]).detach()# ~ is to turn each true to false as if it is flipping
-            # i am taking the all the unlabelled 
+            # i am taking the all the unlabelled and detachhing the gradients
             # Returns a new Tensor, detached from the current graph.
             # The result will never require gradient.
-            # rank_feat are the unlabeled features
+            # rank_feat are the subset of unlabeled features for first augmentation
+        ## rank_feat becomes z_{i}^{u}
+        ## we rank the values in vector z_{i}^{u} by magnitude.
             rank_idx = torch.argsort(rank_feat, dim=1, descending=True)# you have for example 68 unlabled point each of size of 512
-            # Returns the indices that sort a tensor along a given dimension in ascending order by value.
-            # for example rank_feat
-                # [0.4731, 0.6749, 0.1237,  ..., 0.0071, 0.0018, 0.0450],
-                # [0.4363, 0.6436, 0.1356,  ..., 0.0117, 0.0087, 0.0559],
-            # when we sort we say 
-                # [0, 0, 1,  ..., 1, 1, 1],
-                # [1,1, 0, 0.1237,  ..., 0, 0, 0],
+            # Returns the indices that sort a tensor along a given dimension in descending order by value.
+            # for example :
+            # a =tensor([[8.8466e-01, 7.5498e-01, 5.3452e-01, 2.3279e-01, 4.1647e-01],
+            #     [5.7411e-02, 2.8372e-04, 1.0783e-02, 5.9285e-01, 4.2223e-01],
+            #     [6.2338e-01, 2.0106e-02, 6.4205e-01, 9.2479e-01, 4.8820e-01],
+            #     [1.1800e-01, 6.9137e-01, 6.6532e-01, 5.5088e-01, 1.9753e-01]])
+
+            # when we sort we say in descending order
+                # tensor([[0, 1, 2, 4, 3],
+                #     [3, 4, 0, 2, 1],
+                #     [3, 2, 0, 4, 1],
+                #     [1, 2, 3, 4, 0]])
                 # so in every picture we have feature vector flattened. we sort each value in all feature vectors and put ranking 
                 # according who is bigger than you.
-            # rank_idx is size of (68 by 512)
-            rank_idx1, rank_idx2= PairEnum(rank_idx)# mask is set to none
+            # rank_idx is size of (68 by 512) 68 comes from the idea that i have 68 unlabled vectors in this batch 
+            rank_idx1, rank_idx2= PairEnum(rank_idx)# mask passed is set to none
             # rank_idx1 (4624,512) repeated variable. imagine that you have 68 pictures features and we repeats them 68 times
             # so all the whole variable is copied and put 64 times.
             # rank_idx2. each feature vector size 512 i repeat it 68 times so i have (68,34816)=(68,68*512). then
                 # i reshape it to (-1,512) so that the final vector becomes  size of [4624, 512]
-                # in other words each vector is repeated 64 times then next vector repeat 64 times etc 
+                # in other words each vector in the matrix is repeated 64 times then next vector repeat 64 times etc 
                 # [474, 307, 448,  ..., 370, 247, 245],
                 # [474, 307, 448,  ..., 370, 247, 245], keep on repeated for 64 times
             rank_idx1, rank_idx2=rank_idx1[:, :args.topk], rank_idx2[:, :args.topk]#you take top 5 so each has this size[4624,5]
-            # what he is doing here ??? i am slicing specific amount topk. this is passed with arguments 
+            # i am slicing specific amount topk. this is passed with arguments
+            # i am sorting each tensor dimension 1 and saving the new sorted design
+            # _ is just the index after sorting
             rank_idx1, _ = torch.sort(rank_idx1, dim=1)
+            # rank_idx1 has size of (4624,5)
             # Sorts the elements of the input tensor along a given dimension in ascending order by value.
             rank_idx2, _ = torch.sort(rank_idx2, dim=1)
             # sorting the indicies
             rank_diff = rank_idx1 - rank_idx2# subtract both from each other 
-            rank_diff = torch.sum(torch.abs(rank_diff), dim=1)# 1 dimension shape 4624
+            # i expect in this matrix to have alot of 0s and some postive and some negative numbers.
+            rank_diff = torch.sum(torch.abs(rank_diff), dim=1)# 1 dimension shape 
+            # applying abs operation accord each variable in the matrix so you shouldnot have any negative number!! i guess
+            # summing along dimension 1 # this make dimension 4624
+            
             # you summ alng top 5
-            target_ulb = torch.ones_like(rank_diff).float().to(device) 
+            target_ulb = torch.ones_like(rank_diff).float().to(device) # 1d vector
             # Return an array of ones with the same shape and type as a given array.
             # Returns a tensor filled with the scalar value 1
 
-            target_ulb[rank_diff>0] = -1 # put negative 1 at locations that has 0 or negative values 
-            #you are picking the unlabeled tensors using mask_lb
+            target_ulb[rank_diff>0] = -1 # put -1 at all locaitons expect the locations that has 0 they will still have 1
+            # locations that has 0 in rank diff will still keep having value 1 in target_ulb
+        # target_ulb is sij
+        # sij = 1 {topk(Φ(xu i )) = topk(Φ(xu j ))} 
+        # what he is saying that if i have the same vector  number for different places so i should have had a row of zeros.
+        #  this means they are similar. 
+         
+            # you are picking the unlabeled tensors using mask_lb
             # prob2 is of the second head softmax output for first augmentation
             prob1_ulb, _= PairEnum(prob2[~mask_lb]) # mask passed by none
             # prob 2 is 128,5 but since u are passing ~mask_lb so you pass unlabled data so you get
             # 68,5 prob1_ulb is the return of x1 which will be size of (4624.5)
-            # prob2_bar is of the second head softmax output for first augmentation
+            # prob2_bar is of the second head softmax output for second augmentation
             _, prob2_ulb = PairEnum(prob2_bar[~mask_lb]) # mask passed by none 
             # prob2_ulb shape 4624 by 5 
+            # prob2_ulb consist of each vector repeated 5 times under each other then next vector repeated 68 times
 
             loss_ce = criterion1(output1[mask_lb], label[mask_lb])#cross entropy loss on labeled data
+            # prob1_ulb picture 1 probabiliteis for unlabeled class
+            # prob2_ulb picture 2 probabiltieis for unlabled class 
+            # target_ulb matrix of 1 and -1  simi: 1->similar; -1->dissimilar; 0->unknown(ignore)
+
             loss_bce = criterion2(prob1_ulb, prob2_ulb, target_ulb) # BCE in utils file
-            # target_ulb is matrix with 1 and -1 at values with rank diff less than or = 0
+            # since 
+            # prob1_ulb probulity of second head (unlabeled) of first augmentaiton picture
+            # prob2_ulb probulity of second head (unlabeled) of second augmentaiton picture Why is he passing this past in here??? 
+            # target_ulb sij 1d vector
+            # target_ulb is matrix with 1 and -1 
+            # consistency_loss as followed previosuly 
             consistency_loss = F.mse_loss(prob1, prob1_bar) + F.mse_loss(prob2, prob2_bar)
             loss = loss_ce + loss_bce + w * consistency_loss # summing up the losses
 

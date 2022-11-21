@@ -81,23 +81,31 @@ class Identity(nn.Module):
         super(Identity, self).__init__()
     def forward(self, x):
         return x
-# why doesnot he just use the module of binary cross entropy? My guess it is different in here than normal case
-# slowly we need to check it.
+# I donot get it how he is calcuating stuff in here 
 class BCE(nn.Module):
     eps = 1e-7 # Avoid calculating log(0). Use the small value of float16.
     def forward(self, prob1, prob2, simi):
         # simi: 1->similar; -1->dissimilar; 0->unknown(ignore)
         assert len(prob1)==len(prob2)==len(simi), 'Wrong input size:{0},{1},{2}'.format(str(len(prob1)),str(len(prob2)),str(len(simi)))
         # make sure that everything has the same size
+        # simi is a 1d vector
         # are these tensors or what exactly??? yes they are all tensors 
-        P = prob1.mul_(prob2)#multiply(4624,5) by another matrix same size
-        P = P.sum(1)# sum along axis 1 so you have size fo 4624
-        # simi has shape as P 
+        P = prob1.mul_(prob2)# output is (4624,5) so 
+        # i have some probabilities from first picture
+        # i have some probabilties from second picture
+        # we can say i am multiply probability matrix for all picture in first augmentation with first probebiltiy tensor for second augmentation
+        # you do that for all X matrix you have.
+        P = P.sum(1)# sum all probabilities in each vector (4624)
+        # you have a vector of size 4624
+        # you mutlmiply simi by P then you add to it 
         # simi.eq(-1).type_as(P) reutnra tensor with 1 and zero at location where tnesor has value of -2
         # you mulptily by simi then you add to it this tensor
+        # simi.eq(-1) returns the places that are equal to -1 in form for boolean 
+        # as type turn it into 1 and 0
+        # you add 1 to places that are not similar (have the value -1)
         P.mul_(simi).add_(simi.eq(-1).type_as(P))
-        neglogP = -P.add_(BCE.eps).log_()#
-        return neglogP.mean()
+        neglogP = -P.add_(BCE.eps).log_()# has size of 4624
+        return neglogP.mean()# you calculate the mean 
 def PairEnum(x,mask=None):
     # Enumerate all pairs of feature in x
     # x is a tensor of size 68,512 
