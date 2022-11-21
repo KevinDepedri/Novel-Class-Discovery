@@ -93,7 +93,8 @@ class BCE(nn.Module):
         P = prob1.mul_(prob2)# output is (4624,5) so 
         # i have some probabilities from first picture
         # i have some probabilties from second picture
-        # we can say i am multiply probability matrix for all picture in first augmentation with first probebiltiy tensor for second augmentation
+        # we can say i am multiply probability matrix for all picture in first augmentation 
+        # with first probebiltiy tensor for second augmentation
         # you do that for all X matrix you have.
         P = P.sum(1)# sum all probabilities in each vector (4624)
         # you have a vector of size 4624
