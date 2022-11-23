@@ -115,8 +115,6 @@ class Identity(nn.Module):
         return x
 
 
-# why doesn't he just use the module of binary cross entropy? It is different than in normal case
-# I don't get it how he is calculating stuff in here
 class BCE(nn.Module):
     eps = 1e-7  # Avoid calculating log(0). Use the small value of float16.
 
@@ -127,7 +125,6 @@ class BCE(nn.Module):
                                                                                             str(len(simi)))
         # make sure that everything has the same size
         # simi is a 1d vector
-        # are these tensors or what exactly??? yes they are all tensors 
         P = prob1.mul_(prob2)  # multiply(4624,5) by another matrix same size
         # i have some probabilities from first picture
         # i have some probabilities from second picture
