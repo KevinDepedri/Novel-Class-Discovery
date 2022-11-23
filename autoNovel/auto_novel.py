@@ -55,8 +55,7 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
             output1_bar, output2_bar, _ = model(x_bar)  # getting output of 2 heads
 
             # Apply softmax on all the computed outputs to turn everything into probabilities
-            prob1, prob1_bar, prob2, prob2_bar = F.softmax(output1, dim=1), F.softmax(output1_bar, dim=1), F.softmax(
-                output2, dim=1), F.softmax(output2_bar, dim=1)
+            prob1, prob1_bar, prob2, prob2_bar = F.softmax(output1, dim=1), F.softmax(output1_bar, dim=1), F.softmax(output2, dim=1), F.softmax(output2_bar, dim=1)
 
             # Compute a tensor mask of true and false with the size of the batch size. Here, for each example in the
             # batch_size we will have a 'true' value when its label has a value lower than the num_labeled_classes (5),
@@ -100,18 +99,41 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
             # so all the whole variable is copied and put 64 times.
             # rank_idx2. each feature vector size 512 i repeat it 68 times so i have (68,34816)=(68,68*512). then
             # i reshape it to (-1,512) so that the final vector becomes  size of [4624, 512]
-            # in other words each vector in the matrix is repeated 64 times then next vector repeat 64 times etc
-            # [474, 307, 448,  ..., 370, 247, 245],
-            # [474, 307, 448,  ..., 370, 247, 245], keep on repeated for 64 times
+            # if you donot understand the things above ignore it and look at example to see the kind of outptu returned in here.
+            # Example if you have the following tensor x
+            #      x =tensor([[1, 2,3, 4, 5],
+                    #        [6, 7, 8, 9, 10],
+                    #        [11, 12, 13, 14, 15]]) it is tensoe 3,5
+            # x1,x2 =PairEnum(x)
+            # x1 will be size of (9,5) and it will look like this
+            # x1 =tensor([[1, 2,3, 4, 5],
+                    #        [6, 7, 8, 9, 10],
+                    #        [11, 12, 13, 14, 15],
+                    #        [1, 2,3, 4, 5],
+                    #        [6, 7, 8, 9, 10],
+                    #        [11, 12, 13, 14, 15],
+                    #        [1, 2,3, 4, 5],
+                    #        [6, 7, 8, 9, 10],
+                    #        [11, 12, 13, 14, 15]])
+            # x2 will be size of (9,5) and it look like this
+            # x2 =tensor([[1, 2,3, 4, 5],
+            #             [1, 2,3, 4, 5],
+            #             [1, 2,3, 4, 5],
+            #             [6, 7, 8, 9, 10],
+            #             [6, 7, 8, 9, 10],
+            #             [6, 7, 8, 9, 10],
+            #             [11, 12, 13, 14, 15],
+            #             [11, 12, 13, 14, 15],
+            #             [11, 12, 13, 14, 15]])
 
             # Slice the rank_idx previously computed and take the top-5 elements. Now the tensor has this size (4624,5)
             rank_idx1, rank_idx2 = rank_idx1[:, :args.topk], rank_idx2[::args.topk]
 
-            # Sorts the elements of the input tensor along a given dimension in ascending order by value on both tensors
+            # Sorts the elements of the input tensor along a given dimension in ascending order by value on both tensors along dimension 1
             rank_idx1, _ = torch.sort(rank_idx1, dim=1)
             rank_idx2, _ = torch.sort(rank_idx2, dim=1)
 
-            # Compute the difference between the previously computed sorted rank
+            # Compute the difference between the previously computed sorted rank. This matrix to have alot of 0s and some postive and some negative numbers.
             rank_diff = rank_idx1 - rank_idx2
             # Sum the elements of the input tensor along a given dimension, in this case dimension 1 (which as size 5),
             # applying abs operation accord each variable in the matrix so you shouldn't have any negative number
@@ -120,7 +142,7 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
             # Instantiate an array of ones (1) with the same shape and type as a given array (1,4624)
             target_ulb = torch.ones_like(rank_diff).float().to(device)  # Example: tensor (1,4624)
 
-            # Change the ones (1) to minus one (-1) if the rank_difference in that position is grater than 0, it means
+            # Change the ones (1) to minus one (-1) if the rank_difference in that position is greater than 0, it means
             # that the two compared features has not the same values. We want to keep track of that since it means that
             # it is less probable that the two samples belong to the same class
             # Therefore, target_ulb is a matrix of 1 and -1 if Sij: 1->similar; -1->dissimilar; 0->unknown(ignore)
@@ -135,7 +157,6 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
             # Do the same as above. Extract the probabilities of the unlabeled sample computed by the second head for
             # the first augmentation, then slice using the tensor mask, finally apply PairEnum
             _, prob2_ulb = PairEnum(prob2_bar[~mask_lb])  # Example: tensor (62,5) --> (4624,5)
-            # prob2_ulb consist of each vector repeated 5 times under each other then next vector repeated 68 times
 
 
             # Compute the Cross entropy (CE) loss over the labeled sample (using the tensor mask to slice them)
@@ -210,8 +231,7 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
 
             loss_ce = criterion1(output1[mask_lb], label[mask_lb])  # crosss entropy loss for supervised part
             # all above very similar to before 
-            # the next part is the different part. 
-            # this is the different part for IL
+     
 
             # mask_lb used to access unlabeled stuff.
             # (output2[~mask_lb]).detach().max(1)[1] you have 62*5 tensor you removed gradient return the biggest tensor.
@@ -223,8 +243,6 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
             # , for the unlabelled data we use the pseudo-labels ˆ yu i , which are generated on-the-fly from the head ηu at each forward pass
             loss_ce_add = w * criterion1(output1[~mask_lb],label[~mask_lb]) / args.rampup_coefficient * args.increment_coefficient
 
-            # i don't understand why divide by ramp coefficient and increment coefficient
-            # everything normal
             loss_bce = criterion2(prob1_ulb, prob2_ulb, target_ulb)  # binary cross entropy
             consistency_loss = F.mse_loss(prob1, prob1_bar) + F.mse_loss(prob2, prob2_bar)  # between label data or unlabled data
 
