@@ -155,7 +155,8 @@ def PairEnum(x, mask=None):
     # tensor of dimension 2, so we need to specify the wanted repetitions along these two dimensions. Here we have
     # repeated the first dimension by itself (e.g., if it is 68 it will be repeated 68 times), while the second
     # dimension is repeated only once (meaning that it is not repeated at all)
-    x1 = x.repeat(x.size(0), 1)  # Example: output tensor (68*68,512) = (4624,512)
+    # x1 = x.repeat(x.size(0), 1)  
+    x1 = x.repeat(x.size(0),1)# Example: output tensor (68*68,512) = (4624,512)
 
     # Apply the same function to repeat the second dimension (512) a number of times equal to the first dimension (68
     # in this example), the result is a tensor (68,34816).

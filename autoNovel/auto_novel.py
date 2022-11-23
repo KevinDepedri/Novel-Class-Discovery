@@ -5,7 +5,7 @@ from torch.optim import SGD, lr_scheduler
 from sklearn.metrics.cluster import normalized_mutual_info_score as nmi_score
 from sklearn.metrics import adjusted_rand_score as ari_score
 from sklearn.cluster import KMeans
-from utils.util import BCE, PairEnum, cluster_acc, Identity, AverageMeter, seed_torch
+from utils.util import BCE, PairEnum, cluster_acc, Identity, AverageMeter, seed_torch,accuracy
 from utils import ramps
 from models.resnet import ResNet, BasicBlock
 from data.cifarloader import CIFAR10Loader, CIFAR10LoaderMix, CIFAR100Loader, CIFAR100LoaderMix
@@ -13,8 +13,9 @@ from data.svhnloader import SVHNLoader, SVHNLoaderMix
 from tqdm import tqdm
 import numpy as np
 import os
-
-
+# wandb importing
+import wandb
+# global current_epoch
 # Auto-novel training without incremental learning (IL)
 def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args):
     # Instantiate SGD optimizer with input learning rate, momentum and weight_decay
@@ -34,7 +35,15 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
     # Iterate for each epoch
     for epoch in range(args.epochs):
         # Define an instance of AverageMeter to compute and store the average and current values of the loss
+        # current_epoch = epoch# setting the global variable to the current epoch 
         loss_record = AverageMeter()
+        loss_record_CEL = AverageMeter()   # average metter to follow the cross entropy loss
+        loss_record_BCE = AverageMeter()   # average meter to follow the binary cross entropy loss
+        loss_record_CON_1 = AverageMeter() # average meter to follow the first paramter of consistency loss
+        loss_record_CON_2 = AverageMeter() # average meter to follow the second paramter of consistency loss
+        loss_record_CON_total = AverageMeter() # average meter to follow the total of consistency loss
+        acc_record = AverageMeter() # track the accuracy of the first head
+
         # Set the model in the training mode
         model.train()
 
@@ -127,7 +136,7 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
             #             [11, 12, 13, 14, 15]])
 
             # Slice the rank_idx previously computed and take the top-5 elements. Now the tensor has this size (4624,5)
-            rank_idx1, rank_idx2 = rank_idx1[:, :args.topk], rank_idx2[::args.topk]
+            rank_idx1, rank_idx2 = rank_idx1[:, :args.topk], rank_idx2[:,:args.topk]
 
             # Sorts the elements of the input tensor along a given dimension in ascending order by value on both tensors along dimension 1
             rank_idx1, _ = torch.sort(rank_idx1, dim=1)
@@ -161,35 +170,52 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
 
             # Compute the Cross entropy (CE) loss over the labeled sample (using the tensor mask to slice them)
             loss_ce = criterion1(output1[mask_lb], label[mask_lb])
+            acc = accuracy(output1[mask_lb], label[mask_lb]) # calculating the accuracy  
+            acc_record.update(acc[0].item(),x.size(0))
             # Compute the Binary Cross entropy (BCE) loss over the labeled sample (using the tensor mask to slice them)
             loss_bce = criterion2(prob1_ulb, prob2_ulb, target_ulb)
             # Compute the Mean Squared error (MSE) loss used as consistency loss between base samples and augmented ones
-            consistency_loss = F.mse_loss(prob1, prob1_bar) + F.mse_loss(prob2, prob2_bar)
+            consistency_loss_c1 = F.mse_loss(prob1, prob1_bar)
+            consistency_loss_c2 = F.mse_loss(prob2, prob2_bar)
+            consistency_loss =  consistency_loss_c1 + consistency_loss_c2
 
             # Add up, apply weights and compute the final loss. Then update the loss AverageMeter with that value
             loss = loss_ce + loss_bce + w * consistency_loss
             loss_record.update(loss.item(), x.size(0))
-
+            loss_record_CEL.update(loss_ce.item(), x.size(0))
+            loss_record_BCE.update(loss_bce.item(), x.size(0))
+            loss_record_CON_1.update(consistency_loss_c1.item(), x.size(0))
+            loss_record_CON_2.update(consistency_loss_c2.item(), x.size(0))
+            loss_record_CON_total.update(consistency_loss.item(), x.size(0))
             # Zero the gradient of the optimizer, back-propagate the loss and perform an optimization step
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
             # Perform a step on the input exp_lr_scheduler (scheduler used to define the learning rate)
-            exp_lr_scheduler.step()  # FIXME: Put here to avoid warning, if there are problems move it back above
-
+        
+        
+        exp_lr_scheduler.step()  # FIXME: Put here to avoid warning, if there are problems move it back above
         # Print the result of the training procedure over that epoch
         print('Train Epoch: {} Avg Loss: {:.4f}'.format(epoch, loss_record.avg))
+
 
         # Set the head argument to 'head1', this to ensure that we test the supervised head in the training step below
         print('test on labeled classes')
         args.head = 'head1'
-        test(model, labeled_eval_loader, args)
+        acc_H1,nmi_H1,ari_H1=test(model, labeled_eval_loader, args)
 
         # Set the head argument to 'head2', this to ensure that we test the unsupervised head in the training step below
         print('test on unlabeled classes')
         args.head = 'head2'
-        test(model, unlabeled_eval_loader, args)
+        acc_H2,nmi_H2,ari_H2=test(model, unlabeled_eval_loader, args)
+            # Print the result of the testing procedure obtained computing the three metrics above
+        wandb.log({"epoch": epoch,"Total_average_loss":loss_record.avg,"Cross_entropy_loss":loss_record_CEL.avg,
+                   "Binary_cross_entropy_loss":loss_record_BCE.avg,"Consistency_loss_part_a":loss_record_CON_1.avg,
+                   "Consistency_loss_part_b":loss_record_CON_2.avg,"Consistency_loss_total":loss_record_CON_total.avg,
+                   "Head_1_training_accuracy":acc_record.avg,
+                   "cluster_acc_Head_1": acc_H1,"nmi_Head_1":nmi_H1,"ari_Head_1":ari_H1,
+                   "cluster_acc_Head_2": acc_H2,"nmi_Head_2":nmi_H2,"ari_Head_2":ari_H2}, step = epoch)
 
 
 def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args):
@@ -200,14 +226,12 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
     for epoch in range(args.epochs):
         loss_record = AverageMeter()
         model.train()
-        exp_lr_scheduler.step()
         w = args.rampup_coefficient * ramps.sigmoid_rampup(epoch, args.rampup_length)
         for batch_idx, ((x, x_bar), label, idx) in enumerate(tqdm(train_loader)):
             x, x_bar, label = x.to(device), x_bar.to(device), label.to(device)
             output1, output2, feat = model(x)
             output1_bar, output2_bar, _ = model(x_bar)
-            prob1, prob1_bar, prob2, prob2_bar = F.softmax(output1, dim=1), F.softmax(output1_bar, dim=1), F.softmax(
-                output2, dim=1), F.softmax(output2_bar, dim=1)
+            prob1, prob1_bar, prob2, prob2_bar = F.softmax(output1, dim=1), F.softmax(output1_bar, dim=1), F.softmax(output2, dim=1), F.softmax(output2_bar, dim=1)
             # we transfer them to probabilityies
             mask_lb = label < args.num_labeled_classes  # select unlabled data features.
 
@@ -252,6 +276,7 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+        exp_lr_scheduler.step()
         print('Train Epoch: {} Avg Loss: {:.4f}'.format(epoch, loss_record.avg))
         print('test on labeled classes')
         args.head = 'head1'
@@ -298,8 +323,12 @@ def test(model, test_loader, args):
     # Compute the accuracy metrics for the current test step, see supervised_learning.py for full explanation
     acc, nmi, ari = cluster_acc(targets.astype(int), preds.astype(int)), nmi_score(targets, preds), ari_score(targets, preds)
 
-    # Print the result of the testing procedure obtained computing the three metrics above
+
+    # else:
+        # wandb.log({"cluster_acc_Head_2_test": acc,"nmi_Head_2":nmi,"ari_Head_2_test":ari}, step = current_epoch)
+
     print('Test acc {:.4f}, nmi {:.4f}, ari {:.4f}'.format(acc, nmi, ari))
+    return acc, nmi, ari 
 
 
 if __name__ == "__main__":
@@ -330,7 +359,6 @@ if __name__ == "__main__":
     parser.add_argument('--mode', type=str, default='train')  # Mode: train or test
     # Extract the args and make them available in the args object
     args = parser.parse_args()
-
     # Define if cuda can be used and initialize the device used by torch. Furthermore, specify the torch seed
     args.cuda = torch.cuda.is_available()
     device = torch.device("cuda" if args.cuda else "cpu")
@@ -353,6 +381,18 @@ if __name__ == "__main__":
 
     # Compute the total number of classes
     num_classes = args.num_labeled_classes + args.num_unlabeled_classes
+    # to login into wandb this is the password
+    wandb.login() #4619e908b2f2c21261030dae4c66556d4f1f3178
+    config = dict(
+    learning_rate = args.lr,
+    batch_size = args.batch_size,
+    dataset = args.dataset_name,
+    unlabled_classes = args.num_unlabeled_classes,
+    labled_classes = args.num_labeled_classes,
+    topk=args.topk
+    )
+  
+    wandb.init(project="trends_project", entity="mhaggag96", config = config, save_code = True)
 
     # If we are in training mode
     if args.mode == 'train':
@@ -489,5 +529,6 @@ if __name__ == "__main__":
     args.head = 'head2'
     print('test on unlabeled classes (train split)')
     test(model, unlabeled_eval_loader, args)
+    args.head = 'testing'
     print('test on unlabeled classes (test split)')
     test(model, unlabeled_eval_loader_test, args)
