@@ -235,7 +235,7 @@ class CIFAR100(CIFAR10):
 
 def CIFAR10Data(root, split='train', aug=None, target_list=range(5)):
     # If we have no augmentation just transform to tensor and normalize
-    if aug is None:
+    if aug==None:
         transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
@@ -278,7 +278,7 @@ def CIFAR10Loader(root, batch_size, split='train', num_workers=2,  aug=None, shu
 # Used only in auto_novel.py
 def CIFAR10LoaderMix(root, batch_size, split='train', num_workers=2, aug=None, shuffle=True, labeled_list=range(5), unlabeled_list=range(5, 10), new_labels=None):
     # First choose the type of augmentation between none, once and twice
-    if aug is None:
+    if aug==None:
         transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),

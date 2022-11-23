@@ -352,7 +352,7 @@ if __name__ == "__main__":
     parser.add_argument('--exp_root', type=str, default='./data/experiments/')  # Directory to save the resulting files
     parser.add_argument('--warmup_model_dir', type=str,  default='./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth')  # Directory to find the supervised pretrained model
     parser.add_argument('--topk', default=5, type=int)  # Number of top elements that we want to compare
-    parser.add_argument('--IL', action='store_true', default=False, help='w/ incremental learning')  # Enable/Disable IL
+    parser.add_argument('--IL', action='store_true', default=True, help='w/ incremental learning')  # Enable/Disable IL
     parser.add_argument('--model_name', type=str, default='resnet')  # Name of the model
     parser.add_argument('--dataset_name', type=str, default='cifar10',  help='options: cifar10, cifar100, svhn')  # Name of the used dataset
     parser.add_argument('--seed', default=1, type=int)  # Seed to use
@@ -383,14 +383,13 @@ if __name__ == "__main__":
     num_classes = args.num_labeled_classes + args.num_unlabeled_classes
     # to login into wandb this is the password
     wandb.login() #4619e908b2f2c21261030dae4c66556d4f1f3178
-    config = dict(
-    learning_rate = args.lr,
-    batch_size = args.batch_size,
-    dataset = args.dataset_name,
-    unlabled_classes = args.num_unlabeled_classes,
-    labled_classes = args.num_labeled_classes,
-    topk=args.topk
-    )
+    config = {
+    "learning_rate":args.lr,
+    "batch_size":args.batch_size,
+    "dataset":args.dataset_name,
+    "unlabled_classes":args.num_unlabeled_classes,
+    "labled_classes" :args.num_labeled_classes,
+    "topk":args.topk}
   
     wandb.init(project="trends_project", entity="mhaggag96", config = config, save_code = True)
 
