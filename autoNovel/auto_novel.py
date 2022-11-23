@@ -178,7 +178,7 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
             consistency_loss_c1 = F.mse_loss(prob1, prob1_bar)
             consistency_loss_c2 = F.mse_loss(prob2, prob2_bar)
             consistency_loss =  consistency_loss_c1 + consistency_loss_c2
-
+            # consistency_loss =F.mse_loss(prob1, prob1_bar)+F.mse_loss(prob2, prob2_bar)
             # Add up, apply weights and compute the final loss. Then update the loss AverageMeter with that value
             loss = loss_ce + loss_bce + w * consistency_loss
             loss_record.update(loss.item(), x.size(0))
@@ -194,9 +194,9 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
 
             # Perform a step on the input exp_lr_scheduler (scheduler used to define the learning rate)
         
-        
         exp_lr_scheduler.step()  # FIXME: Put here to avoid warning, if there are problems move it back above
         # Print the result of the training procedure over that epoch
+        
         print('Train Epoch: {} Avg Loss: {:.4f}'.format(epoch, loss_record.avg))
 
 
@@ -352,7 +352,7 @@ if __name__ == "__main__":
     parser.add_argument('--exp_root', type=str, default='./data/experiments/')  # Directory to save the resulting files
     parser.add_argument('--warmup_model_dir', type=str,  default='./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth')  # Directory to find the supervised pretrained model
     parser.add_argument('--topk', default=5, type=int)  # Number of top elements that we want to compare
-    parser.add_argument('--IL', action='store_true', default=True, help='w/ incremental learning')  # Enable/Disable IL
+    parser.add_argument('--IL', action='store_true', default=False, help='w/ incremental learning')  # Enable/Disable IL
     parser.add_argument('--model_name', type=str, default='resnet')  # Name of the model
     parser.add_argument('--dataset_name', type=str, default='cifar10',  help='options: cifar10, cifar100, svhn')  # Name of the used dataset
     parser.add_argument('--seed', default=1, type=int)  # Seed to use
@@ -490,6 +490,7 @@ if __name__ == "__main__":
             model.head1.weight.data[:args.num_labeled_classes] = save_weight
             # The bias for the 10 classes in the new head is set to the minimum of previous bias -1
             model.head1.bias.data[:] = torch.min(save_bias) - 1.
+            model.head1.bias.data[:args.num_labeled_classes] = save_bias
 
             # Finally lunch the training procedure
             train_IL(model, mix_train_loader, labeled_eval_loader, unlabeled_eval_loader, args)

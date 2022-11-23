@@ -140,6 +140,7 @@ class BCE(nn.Module):
         # simi.eq(-1) returns the places that are equal to -1 in form for boolean
         # as type turn it into 1 and 0
         # you add 1 to places that are not similar (have the value -1
+        P.mul_(simi).add_(simi.eq(-1).type_as(P))
         neglogP = -P.add_(BCE.eps).log_()  # has size of 4624
         return neglogP.mean()  # you calculate the mean
 
