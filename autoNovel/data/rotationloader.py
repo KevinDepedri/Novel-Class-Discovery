@@ -12,87 +12,92 @@ from torch.utils.data.dataloader import default_collate
 from PIL import Image
 import os
 import errno
-import numpy as np
 import sys
 import csv
 from tqdm import tqdm
-
 from pdb import set_trace as breakpoint
+
 
 class GenericDataset(data.Dataset):
     def __init__(self, dataset_name, split, random_sized_crop=False,
                  num_imgs_per_cat=None, dataset_root=None):
         self.split = split.lower()
-        self.dataset_name =  dataset_name.lower()
+        self.dataset_name = dataset_name.lower()
         self.name = self.dataset_name + '_' + self.split
         self.random_sized_crop = random_sized_crop
-        # not my comment
-        # The num_imgs_per_cats input argument specifies the number
-        # of training examples per category that would be used.
-        # This input argument was introduced in order to be able
-        # to use less annotated examples than what are available
-        # in a semi-superivsed experiment. By default all the 
-        # available training examplers per category are being used.
+        # The num_imgs_per_cats input argument specifies the number of training examples per category that would be
+        # used. This input argument was introduced in order to be able to use less annotated examples than what are
+        # available in a semi-supervised experiment. By default, all the available training examples per category are
+        # being used.
         self.num_imgs_per_cat = num_imgs_per_cat
 
-        if self.dataset_name=='cifar10':
-            self.mean_pix = [x/255.0 for x in [125.3, 123.0, 113.9]] # [0.4913725490196078, 0.4823529411764706, 0.4466666666666667]
-            self.std_pix = [x/255.0 for x in [63.0, 62.1, 66.7]] # [0.24705882352941178, 0.24352941176470588, 0.2615686274509804]
-            # I ran the codes above and I got these values.
-            # they are different from values in cifar_datalaoders values in the other file. 
-            # I googled and this are the true mean and std of cifar 10 dataset
-            # https://stackoverflow.com/questions/66678052/how-to-calculate-the-mean-and-the-std-of-cifar10-data
+        # If the dataset is cifar10 then apply the following normalization
+        if self.dataset_name == 'cifar10':
+            self.mean_pix = [x / 255.0 for x in
+                             [125.3, 123.0, 113.9]]  # [0.4913725490196078, 0.4823529411764706, 0.4466666666666667]
+            self.std_pix = [x / 255.0 for x in
+                            [63.0, 62.1, 66.7]]  # [0.24705882352941178, 0.24352941176470588, 0.2615686274509804]
+            # TODO: these above are the correct values for cifar, verify why in the CifarLoader file they are different
             if self.random_sized_crop:
                 raise ValueError('The random size crop option is not supported for the CIFAR dataset')
 
-            transform = []# list of transformer that will be impleented 
-            if (split != 'test'):# you are entering if you are in the training conditions
-                transform.append(transforms.RandomCrop(32, padding=4)) # Crop the given image at a random location.
-                # If a sequence of length 4 is provided this is the padding for the left, top, right and bottom borders respectively
-                transform.append(transforms.RandomHorizontalFlip()) # Horizontally flip the given image randomly with a given probability
-                # default is 0.5. 
-            transform.append(lambda x: np.asarray(x))# add transformaiton of convert input into array
-            self.transform = transforms.Compose(transform) # Composes several transforms together. 
+            # Build a transform as a list
+            transform = []
+            # If we are in the training split
+            if split != 'test':
+                # Perform a random crop of 32x32 with a padding of 4, if sequence provided it is [left,top,right,bottom]
+                transform.append(transforms.RandomCrop(32, padding=4))
+                # Horizontally flip the given image randomly with a given probability (default is 0.5)
+                transform.append(transforms.RandomHorizontalFlip())
+            # Convert the input into a numpy array
+            transform.append(lambda x: np.asarray(x))
+
+            # Compose the previously defined transform
+            self.transform = transforms.Compose(transform)
+
+            # call dataset.__dict__['CIFAR10'], put CIFAR10 dataset in the dataset_root directory (if it is not in the
+            # directory then download it since download=True), create a train split and apply the given transform.
             self.data = datasets.__dict__[self.dataset_name.upper()](
-                dataset_root, train=self.split=='train',
-                download=True, transform=self.transform)# what is this???
-            # object.__dict__ is A dictionary or other mapping object used to store an object’s (writable) attributes.
-            # datasets.__dict__['CIFAR10'] ---> <class 'torchvision.datasets.cifar.CIFAR10'>
-            # you are telling him andiammmoooo download me dataset put in this path and do the following transformaiton.
-        elif self.dataset_name=='cifar100':
-            self.mean_pix = [x/255.0 for x in [129.3, 124.1, 112.4]]
-            self.std_pix = [x/255.0 for x in [68.2, 65.4, 70.4]]
-            # very similar thing where he is using the normalizing stuff.
+                dataset_root, train=self.split == 'train', download=True, transform=self.transform)
+
+        # If the dataset is cifar100 then apply the following procedure (same as above)
+        elif self.dataset_name == 'cifar100':
+            self.mean_pix = [x / 255.0 for x in [129.3, 124.1, 112.4]]
+            self.std_pix = [x / 255.0 for x in [68.2, 65.4, 70.4]]
             if self.random_sized_crop:
                 raise ValueError('The random size crop option is not supported for the CIFAR dataset')
 
             transform = []
-            if (split != 'test'):
+            if split != 'test':
                 transform.append(transforms.RandomCrop(32, padding=4))
                 transform.append(transforms.RandomHorizontalFlip())
             transform.append(lambda x: np.asarray(x))
             self.transform = transforms.Compose(transform)
             self.data = datasets.__dict__[self.dataset_name.upper()](
-                dataset_root, train=self.split=='train',
-                download=True, transform=self.transform)
-        elif self.dataset_name=='svhn':
+                dataset_root, train=self.split == 'train', download=True, transform=self.transform)
+
+        # If the dataset is svhn then apply the following procedure (similar as above)
+        elif self.dataset_name == 'svhn':
             self.mean_pix = [0.485, 0.456, 0.406]
             self.std_pix = [0.229, 0.224, 0.225]
-
             if self.random_sized_crop:
                 raise ValueError('The random size crop option is not supported for the SVHN dataset')
 
             transform = []
-            if (split != 'test'):
-                transform.append(transforms.RandomCrop(32, padding=4))# why no horitonzal flip with svhn???i have no explanation for this
+            if split != 'test':
+                transform.append(transforms.RandomCrop(32, padding=4))
+                # We have no horizontal flip for svhn
             transform.append(lambda x: np.asarray(x))
             self.transform = transforms.Compose(transform)
             self.data = datasets.__dict__[self.dataset_name.upper()](
                 dataset_root, split=self.split,
                 download=True, transform=self.transform)
+
+        # If the dataset is none of the ones above, then rise an error
         else:
             raise ValueError('Not recognized dataset {0}'.format(dataset_name))
-# applying the 2 main methods that should be implemented for any dataset class by ptorch
+
+    # Define the 2 main methods needed for any dataset class in pytorch
     def __getitem__(self, index):
         img, label = self.data[index]
         return img, int(label)
@@ -100,8 +105,10 @@ class GenericDataset(data.Dataset):
     def __len__(self):
         return len(self.data)
 
-class Denormalize(object):# they idea is here is he take tensor multiply by std and add to it the mean
-    # lets wait and see where he is using this in the code
+
+# Invert the normalization procedure, used in the inverse transform in the DataLoader class
+class Denormalize(object):
+    # Take the input tensor multiply by its dataset std and add to it the mean of its dataset
     def __init__(self, mean, std):
         self.mean = mean
         self.std = std
@@ -111,18 +118,32 @@ class Denormalize(object):# they idea is here is he take tensor multiply by std 
             t.mul_(s).add_(m)
         return tensor
 
-def rotate_img(img, rot):# this function is used to rotat the image.
-    if rot == 0: # 0 degrees rotation
+
+# Function used to rotate the input image according to the input rotation.
+def rotate_img(img, rot):
+    # If rot = 0 then apply a 0 degrees rotation and return the rotated image
+    if rot == 0:
         return img
-    elif rot == 90: # 90 degrees rotation
-        return np.flipud(np.transpose(img, (1,0,2)))
-        # flipud Reverse the order of elements along axis 0 (up/down).
-    elif rot == 180: # 90 degrees rotation
+
+    # If rot = 1 then apply a 90 degrees rotation and return the rotated image
+    elif rot == 90:
+        # Use numpy to reverse the order of elements along axis 0 (up/down)
+        return np.flipud(np.transpose(img, (1, 0, 2)))
+
+    # If rot = 2 then apply a 180 degrees rotation and return the rotated image
+    elif rot == 180:
+        # Use numpy to reverse the order of elements along axis 1 (left/right)
         return np.fliplr(np.flipud(img))
-    elif rot == 270: # 270 degrees rotation / or -90
-        return np.transpose(np.flipud(img), (1,0,2))
+
+    # If rot = 3 then apply a 270 degrees rotation and return the rotated image
+    elif rot == 270:
+        # Use numpy to reverse the order of elements along axis 0 (up/down)
+        return np.transpose(np.flipud(img), (1, 0, 2))
+
+    # If rot is none of he above values, then rise error
     else:
         raise ValueError('rotation should be 0, 90, 180, or 270 degrees')
+
 
 # class of data loader
 class DataLoader(object):
@@ -133,64 +154,74 @@ class DataLoader(object):
                  epoch_size=None,
                  num_workers=0,
                  shuffle=True):
-        self.dataset = dataset# the dataset
-        self.shuffle = shuffle# flag for shufling
-        self.epoch_size = epoch_size if epoch_size is not None else len(dataset) # what is the epoch size?number of iterations?
-        # i donot know what is this but he doesnot use it with cifar 10,100 svhn case. it is passed as none
-        self.batch_size = batch_size
-        self.unsupervised = unsupervised# flag to indicate unsupervised
-        self.num_workers = num_workers
+        self.dataset = dataset  # Dataset name
+        self.shuffle = shuffle  # Flag to enable shuffling
+        self.epoch_size = epoch_size if epoch_size is not None else len(dataset)  # Used to generate the seed
+        self.batch_size = batch_size  # Batch size
+        self.unsupervised = unsupervised  # Flag to indicate unsupervised
+        self.num_workers = num_workers  # Num of workers
 
-        mean_pix  = self.dataset.mean_pix
-        std_pix   = self.dataset.std_pix# they are set accordingly to their value from dataset object
+        # Perform normalization accordingly to the statistical values from the dataset object
+        mean_pix = self.dataset.mean_pix
+        std_pix = self.dataset.std_pix
+        # Build the standard transform (turn input image to tensor and apply the normalization)
         self.transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(mean=mean_pix, std=std_pix)
-        ])#turning into tensors and transfomring
+        ])
+        # Build the inverse transform to go back to a normal numpy array (never used in the code)
         self.inv_transform = transforms.Compose([
             Denormalize(mean_pix, std_pix),
             lambda x: x.numpy() * 255.0,
-            lambda x: x.transpose(1,2,0).astype(np.uint8),
-        ])# turn back to normal numpy array
-        # relatively he doesnot use inv_transform anywhere else .
+            lambda x: x.transpose(1, 2, 0).astype(np.uint8),
+        ])
 
     def get_iterator(self, epoch=0):
+        # Compute and apply a random seed
         rand_seed = epoch * self.epoch_size
         random.seed(rand_seed)
+        # If the dataloader is working in unsupervised mode
         if self.unsupervised:
-            # if in unsupervised mode define a loader function that given the
-            # index of an image it returns the 4 rotated copies of the image
-            # plus the label of the rotation, i.e., 0 for 0 degrees rotation,
-            # 1 for 90 degrees, 2 for 180 degrees, and 3 for 270 degrees.
+            # Define a loader function that given the index of an image returns the 4 rotated copies of the image
+            # plus the label of the rotation, i.e., either one between [0,1,2,3] for [0,90,180,270] degrees rotation.
             def _load_function(idx):
-                idx = idx % len(self.dataset)# the size of the data set
-                # we are making index from 0-4999 
-                img0, _ = self.dataset[idx]# i donot care soo much about the label in here. I am accessing the image
+                # Update the index as the module obtained dividing the idx by the size of the dataset
+                idx = idx % len(self.dataset)
+                # Get the image with the computed index from the downloaded dataset, do not consider the label
+                img0, _ = self.dataset[idx]
+                # Define the list of transform necessary to get the 4 rotation of the chosen image
                 rotated_imgs = [
                     self.transform(img0),
-                    self.transform(rotate_img(img0,  90).copy()),
+                    self.transform(rotate_img(img0, 90).copy()),
                     self.transform(rotate_img(img0, 180).copy()),
                     self.transform(rotate_img(img0, 270).copy())
-                ]# it is al ist containing all the rotaiton image applied to it the transform
+                ]
+                # Build a rotation table of LongTensors and turn the transform list into a stack, then return both
                 rotation_labels = torch.LongTensor([0, 1, 2, 3])
-                return torch.stack(rotated_imgs, dim=0), rotation_labels# turn list into a stack
+                return torch.stack(rotated_imgs, dim=0), rotation_labels
+
             def _collate_fun(batch):
+                # Collate the input samples into a batch for yielding from the data loader iterator
                 batch = default_collate(batch)
-                assert(len(batch)==2)# make sure batch size is equal to 2 ? whyyy??because i guess load function returns a stack of roated dimensiaon and roation labels
+                # Check that the length of the batch is equal to 2, otherwise rise error
+                # TODO: Needed since Load function returns a stack of rotated dimension and rotation labels?
+                assert (len(batch) == 2)
                 #  returns a stack and rotation labels
-                batch_size, rotations, channels, height, width = batch[0].size()# you accessesing the stack
-                batch[0] = batch[0].view([batch_size*rotations, channels, height, width])# changing the shape
-                batch[1] = batch[1].view([batch_size*rotations])# changing the shape
+                batch_size, rotations, channels, height, width = batch[0].size()  # you accessioning the stack
+                batch[0] = batch[0].view([batch_size * rotations, channels, height, width])  # changing the shape
+                batch[1] = batch[1].view([batch_size * rotations])  # changing the shape
                 # Returns a new tensor with the same data as the self tensor but of a different shape.
                 return batch
-        else: # supervised mode
-            # if in supervised mode define a loader function that given the
-            # index of an image it returns the image and its categorical label
+
+        # Otherwise, if the dataloader is working in supervised mode
+        else:
+            # Define a loader function that given the index of an image it returns the image and its categorical label
             def _load_function(idx):
                 idx = idx % len(self.dataset)
                 img, categorical_label = self.dataset[idx]
                 img = self.transform(img)
                 return img, categorical_label
+
             # collate_fn is called with a list of data samples at each time. 
             # It is expected to collate the input samples into a batch for yielding from the data loader iterator.
             _collate_fun = default_collate
@@ -198,49 +229,22 @@ class DataLoader(object):
             # an additional outer dimension - batch size. The exact output type can be a torch.Tensor,
             # a Sequence of torch.Tensor, a Collection of torch.Tensor, or left unchanged, depending on the input type. 
 
-        tnt_dataset = tnt.dataset.ListDataset(elem_list=range(self.epoch_size),
-            load=_load_function)#tnt is a library imported above
-        ##Dataset which loads data from a list using given function.
-        # load=function which loads the data.i-th sample is returned by `load(elem_list[i])`. By default `load`
-        #    is identity i.e, `lambda x: x`
-        # 
+        # Create a torchnet dataset using the previously define load function
+        tnt_dataset = tnt.dataset.ListDataset(elem_list=range(self.epoch_size), load=_load_function)
+        # TorchNet is a library imported used to implement a dataset which loads data from a list using given function.
+        # The function 'load' is used to load the i-th data sample returned by `load(elem_list[i])`
+
+        # Build a torchnet dataloader that is based on the previously define torchnet dataset
         data_loader = tnt_dataset.parallel(batch_size=self.batch_size,
-            collate_fn=_collate_fun, num_workers=self.num_workers,
-            shuffle=self.shuffle)# you returning directly the data loader
-            # torch.utils.data.DataLoader(batch_size=1, shuffle=None,num_workers=0, collate_fn=None)
-            # collate – merges a list of samples to form a mini-batch of Tensor(s). 
-              # Used when using batched loading from a map-style dataset.
-            # num_workers  how many subprocesses to use for data loading. 0 means that the data will be loaded in the main process. 
-        # summary this part is not so important. just all you need to know is that he is returning the datalaoder e basta.
+                                           collate_fn=_collate_fun, num_workers=self.num_workers,
+                                           shuffle=self.shuffle)
+        # Here the collate_fun merges a list of samples to form a mini-batch of Tensor(s). Useful when using batched
+        # loading from a map-style dataset. If num_workers is 0 means that the data will be loaded in the main process.
         return data_loader
 
+    # If the class is called, then use the method get_iterator define above
     def __call__(self, epoch=0):
         return self.get_iterator(epoch)
 
     def __len__(self):
         return self.epoch_size / self.batch_size
-    
-# this should be removed for later I was just testing to know what is happening inside to make sure i understood everything 
-if __name__ == '__main__':
-    import matplotlib.pyplot as plt
-    dataset_train = GenericDataset(
-        dataset_name='cifar10',
-        split='train',
-        dataset_root='./data/datasets/CIFAR/'
-       )
-    print(len(dataset_train)) # the length for cifar is 50k
-    dloader_train = DataLoader(
-        dataset=dataset_train,
-        batch_size=64,
-        num_workers=4,
-        shuffle=True)
-    iterator=iter(dloader_train(0))
-    inputs, classes = next(iterator)
-    print(inputs[1])
-    print(inputs[1].shape) #3*32*32
-    print(type(inputs[1])) #torch tensor
-    print(len(inputs)) #256
-    print(len(classes)) #256
-    print((classes)) #256
-    # plt.imshow( inputs[0].permute(1, 2, 0)  )
-    # plt.show()
