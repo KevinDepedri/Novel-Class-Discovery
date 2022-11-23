@@ -525,6 +525,7 @@ if __name__ == "__main__":
         test(model, all_eval_loader, args)
 
     # Then test the model using head2 over the unlabeled dataloader
+    wandb.finish()
     print('Evaluating on Head2')
     args.head = 'head2'
     print('test on unlabeled classes (train split)')
