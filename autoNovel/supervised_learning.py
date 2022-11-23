@@ -11,177 +11,252 @@ from data.svhnloader import SVHNLoader
 from tqdm import tqdm
 import numpy as np
 import os
-# What section is talking about this part???
-# still 2.1 hahahahahahhaha very funny right
-# for real it is The function ηl ◦ Φ is fine-tuned on the labelled dataset Dl in order to learn a classifier for the Cl known classes,
-# this time using the labels yi and optimizing the standard cross-entropy (CE) loss:
-# Only ηl and the last macro-block of Φ (section 3) are updated in order to avoid overfitting the representation to the labelled data.
-# what he is trying to say is that we freeze the first 3 block and fin tune last block with the classifier in supervised learning setting
+
+'''
+Self supervised learning (as from section 2.1 of AutoNovel paper) - part 2
+The function ηl ◦ Φ is fine-tuned on the labelled dataset Dl in order to learn a classifier for the Cl known classes,
+this time using the labels yi and optimizing the standard cross-entropy (CE) loss.
+Only ηl and the last macro-block of Φ (section 3) are updated in order to avoid over-fitting the representation to the 
+labelled data. We freeze the first 3 block and fine-tune last block with the classifier in supervised learning setting
+'''
+
+
 def train(model, train_loader, labeled_eval_loader, args):
-    optimizer = SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)# just a normal sgd with momentum
-    # with weight decay 
-    exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)#Decays the learning rate of each 
-    #parameter group by gamma every step_size epochs. 
-    criterion1 = nn.CrossEntropyLoss() # our beautiful cross entropy losss
+    # Instantiate SGD optimizer with input learning rate, momentum and weight_decay
+    optimizer = SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
+
+    # Instantiate a learning rate scheduler to adjust the learning rate based on the number of epochs. In this case it
+    # is set on the StepLR setting. Decays the learning rate of each parameter group by gamma every step_size epochs.
+    exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)
+
+    # Instantiate a standard cross entropy loss
+    criterion1 = nn.CrossEntropyLoss()
+
+    # Iterate for each epoch
     for epoch in range(args.epochs):
-        loss_record = AverageMeter()# our average meeting for the loss. WHy no average metter for accuracy ???
+        # Define an instance of AverageMeter to compute and store the average and current values of the loss
+        loss_record = AverageMeter()
+        # Set the model in the training mode
         model.train()
-        exp_lr_scheduler.step()
-        for batch_idx, (x, label, idx) in enumerate(tqdm(train_loader)):# only use label data to train the model
-            # dataloader contain 3 things index label and x 
+
+        # Iterate for each batch in the dataloader
+        for batch_idx, (x, label, idx) in enumerate(tqdm(train_loader)):
+            # Dataloader contain: x(input sample), label(sample label), idx(index of sample in the original dataset)
+            # We are interested in using just the sample x and its label to perform supervised learning
             x, label = x.to(device), label.to(device)
-            output1, _, _ = model(x)# returns output 1 for first head,output 2 for second head, output 3 features before the head but we donot use it 
-            # my guess i am trainingi supervised ehre so i donot care about unsupervised head.
-            loss= criterion1(output1, label)# cross entropy loss
-            loss_record.update(loss.item(), x.size(0))# record the loss term
-            optimizer.zero_grad()# zeroing the gradients
-            loss.backward()# loss backward step
-            optimizer.step()# tell the optimzier to take a step 
+
+            # Output1, Output2 and Output3 are the results of Head1, Head2, and features-layer4 respectively, since
+            # we want to perform supervised training, we are just interested in the output of Head1
+            output1, _, _ = model(x)
+
+            # Compute the CE loss and update the loss AverageMeter with that value of loss
+            loss = criterion1(output1, label)
+            loss_record.update(loss.item(), x.size(0))
+
+            # Zero the gradient of the optimizer, back-propagate the loss and perform an optimization step
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            # Perform a step on the input exp_lr_scheduler (scheduler used to define the learning rate)
+            exp_lr_scheduler.step()  # FIXME: Put here to avoid warning, if there are problems move it back above
+
+        # Print the result of the training procedure over that epoch
         print('Train Epoch: {} Avg Loss: {:.4f}'.format(epoch, loss_record.avg))
+
+        # Set the head argument to 'head1', this to ensure that we test the supervised head in the training step below
         print('test on labeled classes')
-        args.head = 'head1'# we are setting that we want head number 1 to be tested and also this head is trained supervised.
-        # other head until the current momemt it is useless.
-        test(model, labeled_eval_loader, args)# run a test 
+        args.head = 'head1'
+        test(model, labeled_eval_loader, args)
+# TO_UNDERSTAND: Since head1 is imposed before running the test step we are getting predictions performed by that head,
+# TO_UNDERSTAND: could it be that they are computing the clustering metrics
 # the question is why are we calculating accuracy of clusters in here??
-# i donot understand to be honest
-# why do we heave the second head of unlabled data in here???
+# i don't understand to be honest
+# why do we heave the second head of unlabeled data in here???
 # i am not sure but he is computing this to see how much is labeled data are clustered well.
-# the idea is that there is no loss here punishing for the bad clustering. it doesnot affect the training.
-# why not just put 1 head in here instead of 2????i donot know 
+# the idea is that there is no loss here punishing for the bad clustering. it doesn't affect the training.
+# why not just put 1 head in here instead of 2????i don't know
+
+
 def test(model, test_loader, args):
-    model.eval() # turn model to evaluation 
-    preds=np.array([])# numpy array for predictions
-    targets=np.array([])# numpy array for targets 
-    for batch_idx, (x, label, _) in enumerate(tqdm(test_loader)):# data loader contain 3 things so everything is fine. no problem
-        x, label = x.to(device), label.to(device)# the labels
-        output1, output2, _ = model(x)# head 1 output and head 2 output
-        # output1 has size of (128,5)
-        if args.head=='head1':
-            output = output1# indicating that we are using the output of head 1 only in here
+    # Put the model in evaluation mode
+    model.eval()
+    # Instantiate two numpy arrays, one for predictions and oen for targets
+    preds = np.array([])
+    targets = np.array([])
+
+    # Iterate for each batch in the dataloader
+    for batch_idx, (x, label, _) in enumerate(tqdm(test_loader)):
+        # Dataloader contain: X(input sample), label(sample label), index(index of sample in the original dataset)
+        # We are interested in using just the sample x and its label to perform supervised learning
+        x, label = x.to(device), label.to(device)
+
+        # Output 1, Output2 and Output3 are the results of Head1, Head2, and features-layer4 respectively, we take the
+        # outputs of the two heads since we are interested in testing the accuracy of one of the two
+        output1, output2, _ = model(x)
+
+        # If the argument head is 'head1' then we take as final output the result of the supervised head
+        if args.head == 'head1':
+            # output1 has size of (128,5), since the batch_size is 128 and the possible classes are 5
+            output = output1
+        # Otherwise, we take as final output the result of the unsupervised head
         else:
-            output = output2# are we training boths heads ??? no we are not 
-        _, pred = output.max(1)# Returns the maximum value of all elements in the input tensor.
-        # dim is set to 1 okay ??? do you understand?
-        # returns a tupple of (max, max_indices)
-        # we care only about max indices 
-        # so my guess pred is size of 128 nyahahahahahahhaha
-        targets=np.append(targets, label.cpu().numpy())# label.cpu.numpy convert tensor to numpy Returns the tensor as a NumPy ndarray.
-        #Append values to the end of an array called targets,
-        # after each iteration you add 128 new values in the end of the target
-        preds=np.append(preds, pred.cpu().numpy())
-        # very similar thing is happening in here.
-    acc, nmi, ari = cluster_acc(targets.astype(int), preds.astype(int)), nmi_score(targets, preds), ari_score(targets, preds) 
-    # what is the cluster_acc? it is a function written in my utils files 
-    # what is the nemi score? sci learn function that i need to google to understand.
-        # it is called normalized_mutual_info_score on sci learn
-        # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.normalized_mutual_info_score.html
-        # Normalized Mutual Information (NMI) is a normalization of the Mutual Information (MI) score to scale 
-        # the results between 0 (no mutual information) and 1 (perfect correlation). In this function, mutual 
-        # information is normalized by some generalized mean of H(labels_true) and H(labels_pred)), defined by the average_method.
-        # This metric is independent of the absolute values of the labels: a permutation of the class or cluster label values 
-        # won’t change the score value in any way.
-        
-    ############################################################################################################################
-    # what is the ari score? sci learn function that i need to google to understand.
-        # it is called adjusted_rand_score on sci learn
-        # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.adjusted_rand_score.html
-        # Rand index adjusted for chance.
-        # The Rand Index computes a similarity measure between two clusterings by considering all pairs of
-        # samples and counting pairs that are assigned in the same or different clusters in the predicted and true clusterings.
-        # The raw RI score is then “adjusted for chance” into the ARI score using the following scheme:
-        # ARI = (RI - Expected_RI) / (max(RI) - Expected_RI)
-        # The adjusted Rand index is thus ensured to have a value close to 0.0 for random labeling independently 
-        # of the number of clusters and samples and exactly 1.0 when the clusterings are identical (up to a permutation).
-        # Similarity score between -1.0 and 1.0.
-    # Another explaination 
-        # The Adjusted Rand score is introduced to determine whether two cluster results are similar to each other. 
-        # In the formula, the “RI” stands for the rand index, which calculates a similarity between two cluster results 
-        # by taking all points identified within the same cluster. This value is equal to 0 when points are assigned into 
-        # .clusters randomly and it equals to 1 when the two cluster results are same. 
-        # This metric is used to evaluate whether dimension-reduced similarity cluster results are similar to one other.
+            output = output2
+
+        # Returns the maximum value for each element in the input tensor, therefore we move from size (128,5) to (128)
+        # Here we are not interested in the value, so we put '_' for the first term. We are interested in the second
+        # term, which is the index of that value, since the index is equal to the predicted class for that input sample.
+        _, pred = output.max(1)
+
+        # Convert tensor to numpy using 'label.cpu.numpy', then append the value in the respective numpy array
+        targets = np.append(targets, label.cpu().numpy())
+        preds = np.append(preds, pred.cpu().numpy())
+
+    # Compute the accuracy metrics for the current test step
+    acc, nmi, ari = cluster_acc(targets.astype(int), preds.astype(int)), nmi_score(targets, preds), ari_score(targets, preds)
+    # The used metrics are:
+    # -----------------------------------------------------------------------------------------------------------------
+    # 1) CLUSTER ACCURACY (cluster_acc), it is a function written in utils.py files
+    # -----------------------------------------------------------------------------------------------------------------
+    # 2) NORMALIZED MUTUAL INFORMATION (nmi_score), it is a sci-learn function
+    # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.normalized_mutual_info_score.html
+    # Normalized Mutual Information (NMI) is a normalization of the Mutual Information (MI) score to scale the results
+    # between 0 (no mutual information) and 1 (perfect correlation). In this function, mutual is normalized by some
+    # generalized mean of H(labels_true) and H(labels_pred)), defined by the average_method. This metric is independent
+    # of the absolute values of the labels: a permutation of the class or cluster label values
+    # won’t change the score value in any way.
+    # -----------------------------------------------------------------------------------------------------------------
+    # 3) ADJUSTED RAND SCORE (ari_score), it is a sci-learn function
+    # https://scikit-learn.org/stable/modules/generated/sklearn.metrics.adjusted_rand_score.html
+    # Rand index adjusted for chance.
+    # The Rand Index computes a similarity measure between two clustering by considering all pairs of
+    # samples and counting pairs that are assigned in the same or different clusters in the predicted and true
+    # clustering. The raw RI score is then “adjusted for chance” into the ARI score using the following scheme:
+    # ARI = (RI - Expected_RI) / (max(RI) - Expected_RI)
+    # The adjusted Rand index is thus ensured to have a value close to 0.0 for random labeling independently
+    # of the number of clusters and samples and exactly 1.0 when the clustering are identical (up to a permutation).
+    # Similarity score between -1.0 and 1.0.
+
+    # ANOTHER EXPLANATION:
+    # The Adjusted Rand score is introduced to determine whether two cluster results are similar to each other.
+    # In the formula, the “RI” stands for the rand index, which calculates a similarity between two cluster results
+    # by taking all points identified within the same cluster. This value is equal to 0 when points are assigned into
+    # .clusters randomly, and it equals to 1 when the two cluster results are same.
+    # This metric is used to evaluate whether dimension-reduced similarity cluster results are similar to one other.
     # What is the adjusted Rand index?
-        #The adjusted Rand index is the corrected-for-chance version of the Rand index. Such a correction for chance 
-        # establishes a baseline by using the expected similarity of all pair-wise comparisons between clusterings specified 
-        # by a random model.
-        # https://baiadellaconoscenza.com/dati/argomento/read/9864-what-is-the-adjusted-rand-index#question-0
+    # The adjusted Rand index is the corrected-for-chance version of the Rand index. Such a correction for chance
+    # establishes a baseline by using the expected similarity of all pair-wise comparisons between clustering specified
+    # by a random model.
+    # https://baiadellaconoscenza.com/dati/argomento/read/9864-what-is-the-adjusted-rand-index#question-0
     # What does a negative adjusted Rand index mean?
-        # Negative ARI says that the agreement is less than what is expected from a random result.
-        # This means the results are 'orthogonal' or 'complementary' to some extend.
+    # Negative ARI says that the agreement is less than what is expected from a random result.
+    # This means the results are 'orthogonal' or 'complementary' to some extend.
+    # -----------------------------------------------------------------------------------------------------------------
+
+    # Print the result of the testing procedure obtained computing the three metrics above
     print('Test acc {:.4f}, nmi {:.4f}, ari {:.4f}'.format(acc, nmi, ari))
     return preds 
 
+
 if __name__ == "__main__":
-    
     import argparse
-    parser = argparse.ArgumentParser(
-            description='cluster',
-            formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument('--lr', type=float, default=0.1)# the learning ratte
-    parser.add_argument('--gamma', type=float, default=0.5)# what is gamma? it is for the schedule parameter :P
-    parser.add_argument('--momentum', type=float, default=0.9)# momentum term of optimzieer
-    parser.add_argument('--weight_decay', type=float, default=1e-4)# weight decay
-    parser.add_argument('--epochs', default=100, type=int)# run for 100 epochs
-    parser.add_argument('--step_size', default=10, type=int)# what is the step size???? it is also for schedular
-    parser.add_argument('--batch_size', default=128, type=int)# batch size
-    parser.add_argument('--num_unlabeled_classes', default=5, type=int)# number of unlabled classes
-    parser.add_argument('--num_labeled_classes', default=5, type=int)# number of lableled classes
-    parser.add_argument('--dataset_root', type=str, default='./data/datasets/CIFAR/')#datasetroot
-    parser.add_argument('--exp_root', type=str, default='./data/experiments/')# where to save the files
-    parser.add_argument('--rotnet_dir', type=str, default='./data/experiments/selfsupervised_learning/rotnet_cifar10.pth')# where to find pretrained model semi supervised
-    parser.add_argument('--model_name', type=str, default='resnet_rotnet')#it is called resnet-rotnet
-    parser.add_argument('--dataset_name', type=str, default='cifar10', help='options: cifar10, cifar100, svhn')
-    parser.add_argument('--mode', type=str, default='train')# lets train it
+    # Initialize the ArgumentParser
+    parser = argparse.ArgumentParser(description='cluster', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    # Get all the needed input arguments
+    parser.add_argument('--lr', type=float, default=0.1)  # Learning rate of optimizer
+    parser.add_argument('--gamma', type=float, default=0.5)  # Gamma of the learning rate scheduler
+    parser.add_argument('--momentum', type=float, default=0.9)  # Momentum term of optimizer
+    parser.add_argument('--weight_decay', type=float, default=1e-4)  # Weight decay of optimizer
+    parser.add_argument('--epochs', default=100, type=int)  # Number of epochs
+    parser.add_argument('--step_size', default=10, type=int)  # Step size of learning rate scheduler
+    parser.add_argument('--batch_size', default=128, type=int)  # Batch size
+    parser.add_argument('--num_unlabeled_classes', default=5, type=int)  # Number of unlabeled classes
+    parser.add_argument('--num_labeled_classes', default=5, type=int)  # Number of labeled classes
+    parser.add_argument('--dataset_root', type=str, default='./data/datasets/CIFAR/')  # Dataset root directory
+    parser.add_argument('--exp_root', type=str, default='./data/experiments/')  # Directory to save the resulting files
+    parser.add_argument('--rotnet_dir', type=str, default='./data/experiments/selfsupervised_learning/rotnet_cifar10.pth')  # Directory to find the semi-supervised pretrained model
+    parser.add_argument('--model_name', type=str, default='resnet_rotnet')  # Name of the model
+    parser.add_argument('--dataset_name', type=str, default='cifar10', help='options: cifar10, cifar100, svhn')  # Name of the used dataset
+    parser.add_argument('--mode', type=str, default='train')  # Mode: train or test
+    # Extract the args and make them available in the args object
     args = parser.parse_args()
-    args.cuda = torch.cuda.is_available()# cuda check available
-    device = torch.device("cuda" if args.cuda else "cpu")# turn cuda to on 
-    runner_name = os.path.basename(__file__).split(".")[0]# take the name supervised_learning
-    model_dir= os.path.join(args.exp_root, runner_name)# create a path with name supervised learning
+
+    # Define if cuda can be used and initialize the device used by torch
+    args.cuda = torch.cuda.is_available()
+    device = torch.device("cuda" if args.cuda else "cpu")
+
+    # Returns the current file name. In this case file is called supervised_learning.py,
+    runner_name = os.path.basename(__file__).split(".")[0]
+    # Define the name of the wanted directory as 'experiment root' + 'name of current file'
+    model_dir = os.path.join(args.exp_root, runner_name)
+    # If the previously defined directory does not exist, them create it
     if not os.path.exists(model_dir):
-        os.makedirs(model_dir)# create a folder
-    args.model_dir = model_dir+'/'+'{}.pth'.format(args.model_name) # save them as with this name resnet_rotnet 
+        os.makedirs(model_dir)
+    # Define the name of the path to save the trained model
+    args.model_dir = model_dir+'/'+'{}.pth'.format(args.model_name)
 
-    model = ResNet(BasicBlock, [2,2,2,2], args.num_labeled_classes, args.num_unlabeled_classes).to(device)# assuming you are working with 10 classes
-    # 5 classes unlabled 5 classes lableld. he is training 2 heads 1 for the labeled and the other for the unlabled data.
+    # Initialize ResNet architecture and also the BasicBlock, which are imported from resnet.py. Then send to cuda
+    model = ResNet(BasicBlock, [2, 2, 2, 2], args.num_labeled_classes, args.num_unlabeled_classes).to(device)
+    # Default inputs assume that we are working with 10 classes of which: 5 classes unlabeled 5 classes labeled.
+    # We have two heads in this ResNet model, head1 for the labeled and head2 for the unlabeled data.
 
-    num_classes = args.num_labeled_classes + args.num_unlabeled_classes# total number of classes.
+    # Compute the total number of classes
+    num_classes = args.num_labeled_classes + args.num_unlabeled_classes
 
-    state_dict = torch.load(args.rotnet_dir)# laod from pre weights
-    # he deleted the old head
-    del state_dict['linear.weight']# just used for training annotation head. size is [4,512]
-    del state_dict['linear.bias']# deleted the weights. [4]
-    # he is deleted the of the linear part of the rot net
-    # after this operation it is as if you no longer have any weights or biases in the end. they are completely deleted
-    model.load_state_dict(state_dict, strict=False)#  whether to strictly enforce that the keys in state_dict match 
-        # the model in here has 2 extra heads while the semisupervised learning module contains no heads but everything else is the same
-    for name, param in model.named_parameters(): 
-        if 'head' not in name and 'layer4' not in name:# in here we are setting some paramters that shouldnot be trained
-            # so the heads should be trained
-            # layer 4  should be trained
-            # anything else will be frozen
+    # Load the weights for the ResNet model from the self-supervised previously trained model (selfsupervised_learning.py)
+    state_dict = torch.load(args.rotnet_dir)
+    # Delete the old linear head parameters. It was used just to perform semi-supervised learning (to predict rotation)
+    del state_dict['linear.weight']  # Size of the old head was [4,512]
+    del state_dict['linear.bias']  # Deleted not only weights but also the biases [4]
+    # After this operation we no longer have any weights or biases in the end. They are completely deleted, we are ready
+    # to learn the weights for the two new heads.
+
+    # Apply the loaded weights to the model, we do not strictly enforce that the keys in state_dict match since the old
+    # model has one head that was removed, while the new model has two new heads. Therefore, hey cannot fully match
+    model.load_state_dict(state_dict, strict=False)
+
+    # Iterate through all the parameters of the new model
+    for name, param in model.named_parameters():
+        # If the parameter under analysis does not belong to 'head' (one of the two heads) or to 'layer4' (features
+        # layer before the two heads), then freeze that parameter. In this way we are ensuring that all the parameters
+        # will be frozen except for the two heads and the features layer, which we want to train.
+        if 'head' not in name and 'layer4' not in name:
             param.requires_grad = False
-    #they only train layers after layer 4. parameters before are fixed.
-    # annotation head to learn low level representation. 
-    # cifar 10loader is super super commented. i would suggest that you look to it if you want to understand what is heppening inside
-    # else it just a cute data loader. nothing so special.
-    if args.dataset_name == 'cifar10':
-        labeled_train_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='train', aug='once', shuffle=True, target_list = range(args.num_labeled_classes))
-        labeled_eval_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='test', aug=None, shuffle=False, target_list = range(args.num_labeled_classes))
-    elif args.dataset_name == 'cifar100':
-        labeled_train_loader = CIFAR100Loader(root=args.dataset_root, batch_size=args.batch_size, split='train', aug='once', shuffle=True, target_list = range(args.num_labeled_classes))
-        labeled_eval_loader = CIFAR100Loader(root=args.dataset_root, batch_size=args.batch_size, split='test', aug=None, shuffle=False, target_list = range(args.num_labeled_classes))
-    elif args.dataset_name == 'svhn':
-        labeled_train_loader = SVHNLoader(root=args.dataset_root, batch_size=args.batch_size, split='train', aug='once', shuffle=True, target_list = range(args.num_labeled_classes))
-        labeled_eval_loader = SVHNLoader(root=args.dataset_root, batch_size=args.batch_size, split='test', aug=None, shuffle=False, target_list = range(args.num_labeled_classes))
 
+    # If the dataset argument is 'cifar10' then use its apposite loader, see cifarloader.py for full explanation
+    if args.dataset_name == 'cifar10':
+        labeled_train_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='train',
+                                             aug='once', shuffle=True, target_list=range(args.num_labeled_classes))
+        labeled_eval_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='test',
+                                            aug=None, shuffle=False, target_list=range(args.num_labeled_classes))
+    # Otherwise, if the dataset argument is 'cifar100' then use its apposite loader
+    elif args.dataset_name == 'cifar100':
+        labeled_train_loader = CIFAR100Loader(root=args.dataset_root, batch_size=args.batch_size, split='train',
+                                              aug='once', shuffle=True, target_list=range(args.num_labeled_classes))
+        labeled_eval_loader = CIFAR100Loader(root=args.dataset_root, batch_size=args.batch_size, split='test',
+                                             aug=None, shuffle=False, target_list=range(args.num_labeled_classes))
+    # Otherwise, if the dataset argument is 'svhn' then use its apposite loader
+    elif args.dataset_name == 'svhn':
+        labeled_train_loader = SVHNLoader(root=args.dataset_root, batch_size=args.batch_size, split='train',
+                                          aug='once', shuffle=True, target_list=range(args.num_labeled_classes))
+        labeled_eval_loader = SVHNLoader(root=args.dataset_root, batch_size=args.batch_size, split='test',
+                                         aug=None, shuffle=False, target_list=range(args.num_labeled_classes))
+
+    # Finally, if the mode argument is 'train', then run the training procedure
     if args.mode == 'train':
-        train(model, labeled_train_loader, labeled_eval_loader, args)# sending to the training set
-        torch.save(model.state_dict(), args.model_dir)# saving the model
+        # Perform the training over the defined model
+        train(model, labeled_train_loader, labeled_eval_loader, args)
+        # Save the model to the specified path
+        torch.save(model.state_dict(), args.model_dir)
         print("model saved to {}.".format(args.model_dir))
-    elif args.mode == 'test':# if i am in the mood of testing
+    # Otherwise, if the mode argument is 'test', then run the testing procedure
+    elif args.mode == 'test':
+        # Load the model from the specified path
         print("model loaded from {}.".format(args.model_dir))
+        # Perform the testing over the loaded model
         model.load_state_dict(torch.load(args.model_dir))
+
+    # In the end, test the model using head1 over the labeled dataloader
     print('test on labeled classes')
     args.head = 'head1'
-    test(model, labeled_eval_loader, args)# testing on the lableed data set 
-    # you are evaluating data points that are labeled first 5 classes
-    
+    test(model, labeled_eval_loader, args)
