@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim import lr_scheduler
-from torchvision import  transforms
+from torchvision import transforms
 import pickle
 import os
 import os.path
@@ -16,52 +16,59 @@ from utils.util import AverageMeter, accuracy
 from models.resnet import BasicBlock
 from tqdm import tqdm
 import shutil
-# So 
-'''
-So ragazee, this is a resnet that isnot the normal reset. it is a bit tricky
-Mainy difference is that in the skip connections some times he put 
-average pooling which is not part of the archiecture of resnet. 
-The idea is that in the paper he doesnot mention how rot net is madde
-when i check the other main they are using alex net not resnet18. 
-For now this is link of rotnet https://github.com/gidariss/FeatureLearningRotNet
 
-to be honest i donot understand why he uses average pooling and i think it is not so important
- the resnet class in here is not super well commented .
- i would suggest going to resnet.py 
- 
 '''
-# all of this he is doing self supervised learning in section 2.1
-# our model Φ trained with self-supervision on the union of Dl and Du
-# all this is section 2.1 capitoo?
+# Self supervised learning (as from section 2.1 of AutoNovel paper) - part 1
+# Here the model is trained with self-supervision on the union of Dl and Du
+
+A modified Resnet is used, where sometimes in the skip connections we have average pooling (not part of original ResNet)
+In the paper it is not mention how RotNet is built. In the majority of the case RotNets use AlexNet and not ResNet18
+GitHub of the RotNet paper: https://github.com/gidariss/FeatureLearningRotNet
+'''
+
+
+# Initialization of a ResNet architecture built to perform self-supervised learning as RotNet. It has only one output
+# heads with 4 possible output classes. The output classes are the 4 possible rotations (0, 90, 180, 270 degrees)
 class ResNet(nn.Module):
     def __init__(self, block, num_blocks, num_classes=10):
         super(ResNet, self).__init__()
         self.in_planes = 64
-
-        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        # Initial Convolution + BatchNormalization
+        self.conv1 = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(64)
-        # make the blocks
+        # Append ResNet18 layers
         self.layer1 = self._make_layer(block, 64, num_blocks[0], stride=1)
         self.layer2 = self._make_layer(block, 128, num_blocks[1], stride=2)
         self.layer3 = self._make_layer(block, 256, num_blocks[2], stride=2)
         self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
+        # Implement a final linear layer to classify between the given classes. This head will be used only to perform
+        # this unsupervised classification task (RotNet), and will be removed in the next task (Supervised training)
         self.linear = nn.Linear(512*block.expansion, num_classes)
-        if is_adapters:# wonot be used as adapters is set to 0 
+        # If is_adapters is true then add a parallel_convolution layer
+        if is_adapters:  # Not used since adapters is set to 0
             self.parallel_conv1 = nn.Conv2d(3, 64, kernel_size=1, stride=1, bias=False)
 
     def _make_layer(self, block, planes, num_blocks, stride):
-        strides = [stride] + [1]*(num_blocks-1)
+        # Compute a strides list for the different blocks. Use the input argument stride for the first block
+        # (this allows to reduce the dimension if it is >1), then use stride=1 for all the other layers in the block
+        strides = [stride] + [1] * (num_blocks - 1)
+        # Define an empty list of layers
         layers = []
+        # Each layer is composed of a set of blocks with the previously defined strides
         for stride in strides:
             layers.append(block(self.in_planes, planes, stride))
-            self.in_planes = planes * block.expansion
+            self.in_planes = planes * block.expansion  # Block expansion is set to 1 in the BasicBlock class
         return nn.Sequential(*layers)
 
     def forward(self, x):
-        if is_adapters:# i donot understnad the use of id_adapters. I couldnot find it anywhere
+        # Compute the output of the NN
+        # If is adapters is true consider also the parallel convolution in the computation of the output
+        if is_adapters:  # TODO:How is is_adapters used and defined??
             out = F.relu(self.bn1(self.conv1(x)+self.parallel_conv1(x)))
+        # Otherwise consider just the previous layers
         else:
             out = F.relu(self.bn1(self.conv1(x)))
+        # Compute the output through all the ResNet layers
         out = self.layer1(out)
         out = self.layer2(out)
         out = self.layer3(out)
@@ -70,91 +77,133 @@ class ResNet(nn.Module):
         out = out.view(out.size(0), -1)
         out = self.linear(out)
         return out
-# training function
+
+# Training function of ResNet
 def train(epoch, model, device, dataloader, optimizer, exp_lr_scheduler, criterion, args):
-    loss_record = AverageMeter()# what is average meter ??? go to utils files it is an object
-    #  it saves the value, average ,sum and count
-    # just tool to average stuff
-    # you need to call update method 
+    # Define two instances of AverageMeter to compute and store the average and current values of the loss and
+    # of the accuracy during the training procedure (see util.py)
+    loss_record = AverageMeter()
     acc_record = AverageMeter()
-    exp_lr_scheduler.step()# putting this here keeps making a warning. we could move it
-    model.train()# set the model in the train mood.
-    for batch_idx, (data, label) in enumerate(tqdm(dataloader(epoch))):# iterating using tqdm  with enum 
-        data, label = data.to(device), label.to(device)# moving data to gpu you input (256,3,32,32)
-        optimizer.zero_grad()# zeroing the gradient
-        output = model(data)# passing data to the model, the output (256,4)
-        loss = criterion(output, label)# cross entrop loss between predicting output and labels of the annotations
-        # calculating the loss the criteria in here is CrossEntropyLoss
-        # the idea or main concept in here that you rotate images and accordingly try to predict how it was rotation 
-        # accordingly. 
-        # measure accuracy and record loss
-        acc = accuracy(output, label)# the accuracy function in utils files. for more detaisl go check the file.
-        # (topk is not passed so it is set to (1,))
-        # acc[0] is top of the list. in this case you only have 1 topk
-        # so you just check accuracy at this point
-        acc_record.update(acc[0].item(), data.size(0))# size 0 is the batch size
-        loss_record.update(loss.item(), data.size(0))# it is very annoying
 
-        # compute gradient and do optimizer step
-        optimizer.zero_grad()# you are  doing zero gradients
-        loss.backward()# doing backwardstep to calculate the loss
-        optimizer.step()# tell the optimizer do step boy.
+    # Set the model in the training mode
+    model.train()
+    # Iterate through the dataloader using tqdm to print a graphic progress bar
+    for batch_idx, (data, label) in enumerate(tqdm(dataloader(epoch))):
+        # Move both data and label to gpu, the data has input (256,3,32,32)
+        data, label = data.to(device), label.to(device)
+        # Zero the gradient of the optimizer to remove previously computed values
+        optimizer.zero_grad()
+        # Compute the output of the model for the input data. Output dimension (256,4)
+        output = model(data)
 
+        # Compute cross entropy loss between the predicted output and labels of the annotation. This is done using the
+        # criterion parameter, the idea is that you rotate images and try to predict how it was rotated accordingly
+        loss = criterion(output, label)
+
+        # Compute the accuracy using the accuracy() function from the file utils.py In this call the argument 'topk' is
+        # not passed, so it is set to default value of (1,). We are just computing the accuracy of the prediction
+        acc = accuracy(output, label)
+
+        # Update the accuracy and loss AverageMeter instances with the values just computed
+        acc_record.update(acc[0].item(), data.size(0))  # data.size(0) is the batch size
+        loss_record.update(loss.item(), data.size(0))
+
+        # Zero the gradient of the optimizer, back-propagate the loss and perform an optimization step
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        # Perform a step on the input exp_lr_scheduler (scheduler used to define the learning rate)
+        exp_lr_scheduler.step()  # FIXME: Putting this here to avoid warning, if there are problems move it back above
+
+    # Print the result of the training procedure
     print('Train Epoch: {} Avg Loss: {:.4f} \t Avg Acc: {:.4f}'.format(epoch, loss_record.avg, acc_record.avg))
 
     return loss_record
 
 def test(model, device, dataloader, args):
+    # Define an instance of AverageMeter to compute and store the average and current values of the accuracy
     acc_record = AverageMeter()
+    # Put the model in evaluation mode
     model.eval()
+    # Iterate through the dataloader using tqdm to print a graphic progress bar
     for batch_idx, (data, label) in enumerate(tqdm(dataloader())):
+        # Move both data and label to gpu, the data has input (256,3,32,32)
         data, label = data.to(device), label.to(device)
+        # Compute the output of the model for the input data. Output dimension (256,4)
         output = model(data)
-     
-        # measure accuracy and record loss
-        acc = accuracy(output, label)# he is just calculating the accuracy
-        acc_record.update(acc[0].item(), data.size(0))# upppdating the average metter 
 
+        # Compute the accuracy using the accuracy() function from the file utils.py
+        # Also in this call the argument 'topk' is not passed, so it is set to default value of (1,)
+        acc = accuracy(output, label)
+        # Update the accuracy AverageMeter object with the values just computed
+        acc_record.update(acc[0].item(), data.size(0))
+
+    # Print the result of the testing procedure
     print('Test Acc: {:.4f}'.format(acc_record.avg))
-    return acc_record 
+    return acc_record
 
 def main():
-    # Training settings
+    # Initialize the ArgumentParser
     parser = argparse.ArgumentParser(description='Rot_resNet')
+
+    # Add to the parser the argument: 'batch_size' with a default value of 64. It is used in the dataloader
     parser.add_argument('--batch_size', type=int, default=64, metavar='N',
-                        help='input batch size for training (default: 64)')# just the batch size  when you donot pass it it use default value
-    parser.add_argument('--no_cuda', action='store_true', default=False,
-                                    help='disables CUDA training')# incaseee you are trainining without cuda
-    parser.add_argument('--num_workers', type=int, default=4, help='number of data loading workers')# passed to the dataloader.
-    parser.add_argument('--seed', type=int, default=1,
-                                    help='random seed (default: 1)')# specific seed is set. maybe we should consider this point in our experiments
-    parser.add_argument('--epochs', type=int, default=200, metavar='N',
-                        help='number of epochs to train (default: 200)')# how many epochs to run 
-    parser.add_argument('--lr', type=float, default=0.1, metavar='LR',
-                        help='learning rate (default: 0.1)')# the learning rate 
-    parser.add_argument('--momentum', type=float, default=0.9, metavar='M',
-                        help='SGD momentum (default: 0.9)')# the momentum value use
-    parser.add_argument('--dataset_name', type=str, default='cifar10', help='options: cifar10, cifar100, svhn')# name of the dataset
-    parser.add_argument('--dataset_root', type=str, default='./data/datasets/CIFAR/')# location of the data set. if you donot pass it it use default
-    parser.add_argument('--exp_root', type=str, default='./data/experiments/')# locaiton to save the experiments
-    parser.add_argument('--model_name', type=str, default='rotnet')#rotnet arhiecture used.
+                        help='input batch size for training (default: 64)')
 
+    # Add to the parser the argument: 'no_cuda' with a default value of False. If it is True we train without cuda
+    parser.add_argument('--no_cuda', action='store_true', default=False, help='disables CUDA training')
+
+    # Add to the parser the argument: 'num_workers' with a default value of 4. It is used in the dataloader
+    parser.add_argument('--num_workers', type=int, default=4, help='number of data loading workers')
+
+    # Add to the parser the argument: 'seed' with a default value of 1. It is used in the dataloader
+    parser.add_argument('--seed', type=int, default=1, help='random seed (default: 1)')
+    # TO_UNDERSTAND: It could be useful in the experiment??
+
+    # Add to the parser the argument: 'epochs' with a default value of 200. It is used in the training procedure
+    parser.add_argument('--epochs', type=int, default=200, metavar='N', help='number of epochs to train (default: 200)')
+
+    # Add to the parser the argument: 'lr' with a default value of 0.1. It is used in the training procedure
+    parser.add_argument('--lr', type=float, default=0.1, metavar='LR', help='learning rate (default: 0.1)')
+
+    # Add to the parser the argument: 'momentum' with a default value of 0.9. It is used in the training procedure
+    parser.add_argument('--momentum', type=float, default=0.9, metavar='M', help='SGD momentum (default: 0.9)')
+
+    # Add to the parser the argument: 'dataset_name' with a default value of cifar10. It is used in the dataset
+    parser.add_argument('--dataset_name', type=str, default='cifar10', help='options: cifar10, cifar100, svhn')
+
+    # Add to the parser the argument: 'dataset_root' with as default path the cifar10 path. It is used in the dataset
+    parser.add_argument('--dataset_root', type=str, default='./data/datasets/CIFAR/')
+
+    # Add to the parser the argument: 'exp_root' with as default path the experiment path. It is used to save result
+    parser.add_argument('--exp_root', type=str, default='./data/experiments/')
+
+    # Add to the parser the argument: 'model_name' with a default value of 'rotnet'. It is used to create directory
+    parser.add_argument('--model_name', type=str, default='rotnet')
+
+    # Extract the args and make them available in the args object
     args = parser.parse_args()
-    use_cuda = not args.no_cuda and torch.cuda.is_available()# allow using of cuda
+
+    # Define if cuda can be used and initialize the device used by torch. Furthermore, specify the torch seed
+    use_cuda = not args.no_cuda and torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
-    torch.manual_seed(args.seed)# set the torch seed to specific value
+    torch.manual_seed(args.seed)
 
-    runner_name = os.path.basename(__file__).split(".")[0]# returns file name . for example the file is called selfsupervised_learning.py,
-    # it returned supervised_leanring
-    model_dir= os.path.join(args.exp_root, runner_name)# string for new directory
+    # Returns the current file name. In this case file is called selfsupervised_learning.py
+    runner_name = os.path.basename(__file__).split(".")[0]
+    # Define the name of the wanted directory as 'experiment root' + 'name of current file'
+    model_dir = os.path.join(args.exp_root, runner_name)
+    # If the previously defined directory does not exist, them create it
     if not os.path.exists(model_dir):
-        os.makedirs(model_dir)# if the directory is not made, we create it
-        # so in general we expect that inside the experiments we should find 3 kinds of folder
-        # 1 for the superverised, semi supervised and autonovel discovery
-    args.model_dir = model_dir+'/'+'{}.pth'.format(args.model_name) # so the saved weight will be turned into
-    # rotnet.pth but why when i open I see rotnet_cifar10 ??? using command passed previously i made it name rotnet_ciar
+        os.makedirs(model_dir)
 
-    # then next part has been commented in the rotation laoder. check if needed.
+    # Define the name of the path to save the trained model
+    args.model_dir = model_dir+'/'+'{}.pth'.format(args.model_name)
+    # FIXME: the saved model should be rotnet.pth but why when I open I see rotnet_cifar10 ??? See GitHub, probably
+    # FIXME: because the previous model has been saved using a different name, until we run all the code we can't know
+
+    # Create a torch dataset for the train and test data. Full comments available in the rotation loader section
     dataset_train = GenericDataset(
         dataset_name=args.dataset_name,
         split='train',
@@ -166,6 +215,7 @@ def main():
         dataset_root=args.dataset_root
         )
 
+    # Create a torch dataloader for the train and test data. Full comments available in the rotation loader section
     dloader_train = DataLoader(
         dataset=dataset_train,
         batch_size=args.batch_size,
@@ -177,35 +227,48 @@ def main():
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         shuffle=False)
-    # you loaded the data with 2 commands above
-    global is_adapters # i donot get the use of it but we know it is global variable and it is set to 0 # Does anyone know what is the use of this???
-    
-    is_adapters = 0 # it is a global variable and it is set to 0 
-    # what happens if I change its value ????
-    model = ResNet(BasicBlock, [2,2,2,2], num_classes=4)# it is trying to predict the rotation
-    # you have only 1 head in the end that takes 512 and turns it to 4 classes related to the 4 rotations that we have
-    # 0,90,180,270
-    # fun fact until now i do not understand the use of block expansion. he sets it to 1
-    model = model.to(device)# sending it to cude. 
 
+    # Define a global variable is_adapters. It is initialized with a value of zero by default.
+    global is_adapters  # TODO: Does anyone know what is the use of this??? what happens if I change its value ????
+    is_adapters = 0
+
+    # Call the previously defined class to instantiate a ResNet architecture with 4 block (each one with two layers).
+    # This NN will be used to predict the rotation of the examples coming from the dataloader, for this reason the
+    # number of classes will be 4, for the four possible rotation (0, 90, 180, 270 degrees)
+    # The ResNet architecture is the one described above, while the BasicBlock is imported from resnet.py
+    model = ResNet(BasicBlock, [2, 2, 2, 2], num_classes=4)
+    # Send the model to the device
+    model = model.to(device)
+
+    # Instantiate SGD optimizer with input learning rate and momentum, and with pre-define weight_decay and Nesterov
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=5e-4, nesterov=True)
-    # setting weight decay momentum with nestrov using stochastic gradient descents algorithim. 
+
+    # Instantiate a learning rate scheduler to adjust the learning rate based on the number of epochs. In this case it
+    # is set on the MultiStepLR setting. It decays the learning rate of each parameter group by gamma once the number
+    # of epoch reaches one of the specified milestones.
     exp_lr_scheduler = lr_scheduler.MultiStepLR(optimizer, milestones=[60, 120, 160, 200], gamma=0.2)
-    # lr scheduler it provides several methods to adjust the learning rate based on the number of epochs.
-    # Decays the learning rate of each parameter group by gamma once the number of epoch reaches one of the milestones. so at 60 i decay then at 120 i decay
-    # milestones  List of epoch indices. Must be increasing.
-    # gamma Multiplicative factor of learning rate decay. Default: 0.1.
-    criterion = nn.CrossEntropyLoss() # normal cross entropy loss 
 
-    best_acc = 0 # set the best accuracy to 0 
-    for epoch in range(args.epochs +1):
-        loss_record = train(epoch, model, device, dloader_train, optimizer, exp_lr_scheduler, criterion, args)# training step
-        acc_record = test(model, device, dloader_test, args)# testing step
-        
-        is_best = acc_record.avg > best_acc # compare average accuracy with best accuracy
-        best_acc = max(acc_record.avg, best_acc)# choose the maximum
+    # Instantiate a standard cross entropy loss
+    criterion = nn.CrossEntropyLoss()
+    # Set the best accuracy to 0
+    best_acc = 0
+
+    # Iterate through the numer of epochs defined in input
+    for epoch in range(args.epochs + 1):
+        # Compute the loss of the training step
+        loss_record = train(epoch, model, device, dloader_train, optimizer, exp_lr_scheduler, criterion, args)
+        # Compute the accuracy of the testing step
+        acc_record = test(model, device, dloader_test, args)
+
+        # Compare the average accuracy saved in the AverageMeter object with the best accuracy measured up to now
+        is_best = acc_record.avg > best_acc
+        # Update the best accuracy if the current average accuracy is greater
+        best_acc = max(acc_record.avg, best_acc)
+        # If the average accuracy is the best accuracy achieved up to now, then save the model in the defined directory
         if is_best:
-            torch.save(model.state_dict(), args.model_dir)# save the model 
+            torch.save(model.state_dict(), args.model_dir)
 
+
+# If the name variable is equal to __main__ then run the main function and start the training and testing procedure.
 if __name__ == '__main__':
     main()
