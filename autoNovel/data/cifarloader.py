@@ -51,7 +51,7 @@ class CIFAR10(data.Dataset):# this is class dataset
 
     test_list = [
         ['test_batch', '40351d587109b95175f43aff81a1287e'],
-    ]#this file is the test file 
+    ]#this file is the test file
     meta = {
         'filename': 'batches.meta',
         'key': 'label_names',
@@ -60,14 +60,14 @@ class CIFAR10(data.Dataset):# this is class dataset
 
     def __init__(self, root, split='train+test',
                  transform=None, target_transform=None,
-                 download=False, target_list = range(5)):
-        # root is the directory where the data set is locatied. which is in this case ./data/datasets/CIFAR/ capitto ?
+                 download=False, target_list=range(5)):
+        # root is the directory where the data set is located. which is in this case ./data/datasets/CIFAR/ capitto ?
         #you pass the transformations that you want to do, download is to downlaod ddata set
         # target list is the range of the labels that you have. for example for labeled you are passing labels from0 to 4 and 
         self.root = os.path.expanduser(root)
         self.transform = transform# group of transformations
         self.target_transform = target_transform# it is a range
-        if download:# if you turn on the download option, it start downloading everything 
+        if download:# if you turn on the download option, it start downloading everything
             self.download()
 
         if not self._check_integrity(): # funcitons used to check if the data is available or not
@@ -93,12 +93,12 @@ class CIFAR10(data.Dataset):# this is class dataset
         for file_name, checksum in downloaded_list:
             file_path = os.path.join(self.root, self.base_folder, file_name)# join ./data/datasets/CIFAR/ with cifar-10-batches-py with file name
             # you get sthg like ./data/datasets/CIFAR/cifar-10-batches-py/data_batch_1
-            with open(file_path, 'rb') as f:# we are opening the file 
+            with open(file_path, 'rb') as f:# we are opening the file
                 if sys.version_info[0] == 2:# this part is due to fact that according to version of sys
                     # we import different libraries of pickle. 
                     entry = pickle.load(f)
                 else:
-                    entry = pickle.load(f, encoding='latin1')# loading a pickle files 
+                    entry = pickle.load(f, encoding='latin1')# loading a pickle files
                 self.data.append(entry['data'])# open the data list and add to it this entry
                 # this is a numpy array of size of 10000,3072 indicating that we have 10k pictures with size of each array 
                 # 3072 
@@ -128,7 +128,7 @@ class CIFAR10(data.Dataset):# this is class dataset
 
 
 
-    def _load_meta(self):#opening the pickle file 
+    def _load_meta(self):#opening the pickle file
         path = os.path.join(self.root, self.base_folder, self.meta['filename'])
         if not check_integrity(path, self.meta['md5']):
             raise RuntimeError('Dataset metadata file not found or corrupted.' +
@@ -142,8 +142,8 @@ class CIFAR10(data.Dataset):# this is class dataset
             # 'label_names': ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck'], 'num_vis': 3072}
             self.classes = data[self.meta['key']]# ['airplane', 'automobile', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
         self.class_to_idx = {_class: i for i, _class in enumerate(self.classes)}
-        #{'airplane': 0, 'automobile': 1, 'bird': 2, 'cat': 3, 'deer': 4, 'dog': 5, 'frog': 6, 'horse': 7, 'ship': 8, 'truck': 9}       
-        
+        #{'airplane': 0, 'automobile': 1, 'bird': 2, 'cat': 3, 'deer': 4, 'dog': 5, 'frog': 6, 'horse': 7, 'ship': 8, 'truck': 9}
+
         # this commented part bellow was always in the code
         #  x = self.class_to_idx
         #  sorted_x = sorted(x.items(), key=lambda kv: kv[1])
@@ -184,7 +184,7 @@ class CIFAR10(data.Dataset):# this is class dataset
                 return False
         return True
 
-    def download(self):# download teh files 
+    def download(self):# download teh files
         import tarfile
 
         if self._check_integrity():
@@ -233,83 +233,107 @@ class CIFAR100(CIFAR10):
         'md5': '7973b15100ade9c7d40fb424638fde48',
     }
 
-def CIFAR10Data(root, split='train', aug=None, target_list=range(5)):# this function is called for supervised learning
-    if aug==None:
+def CIFAR10Data(root, split='train', aug=None, target_list=range(5)):
+    # If we have no augmentation just transform to tensor and normalize
+    if aug is None:
         transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
         ])
-    elif aug=='once':# for supervised learning
+
+    # If we have one augmentation then random crop and horizontal flip the image, then move to tensor and normalize
+    elif aug == 'once':  # Used in supervised_learning.py
         transform = transforms.Compose([
-            transforms.RandomCrop(32, padding=4),# he random cropping while padding
-            transforms.RandomHorizontalFlip(),# doing random horizontal flip
-            transforms.ToTensor(),# turning it to tensor
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-            # Normalize a tensor image with mean and standard deviation.  my question is from where did he get this values 
-            # i donot get from where does he got this values ? the std one are not the same to the computed ones
+            transforms.RandomCrop(32, padding=4),  # Random cropping while padding
+            transforms.RandomHorizontalFlip(),  # Perform a random horizontal flip
+            transforms.ToTensor(),  # Turn the image to tensor
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),  # Normalize using mean and std
+            # TODO: where this STD comes from? the std one are not the same to the computed ones as in RotationLoader
         ])
-        # values from mean  [0.4913725490196078, 0.4823529411764706, 0.4466666666666667] the mean is the same  but the std is different
+        # values from mean [0.4913725490196078, 0.4823529411764706, 0.4466666666666667] are the same
         # values from std [0.24705882352941178, 0.24352941176470588, 0.2615686274509804] but the std is different
-        # it is not important either way now. 
-    elif aug=='twice':# you are using random translateion with reflect  with random hoirozntal flip
+
+    # If we have two augmentations
+    elif aug == 'twice':  # Used in auto_novel.py
         transform = TransformTwice(transforms.Compose([
-            RandomTranslateWithReflect(4),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            RandomTranslateWithReflect(4),  # Random translate and reflect
+            transforms.RandomHorizontalFlip(),  # Perform a random horizontal flip
+            transforms.ToTensor(),  # Turn the image to tensor
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),  # Normalize using mean and std
         ]))
     dataset = CIFAR10(root=root, split=split, transform=transform, target_list=target_list)
     return dataset
-# used for supervised and autonovel
-def CIFAR10Loader(root, batch_size, split='train', num_workers=2,  aug=None, shuffle=True, target_list=range(5)):# it gets called in supervised learning
-    # targetlist usually contains range for num_labeled_classes. so if i am training from class 0 to 5 then i expect labels to be [0,1,2,3,4,5] VA BENE? 
-    dataset = CIFAR10Data(root, split, aug,target_list)# for supervised learning augmentation augmentation is set to once
+
+# Used in supervised_learning.py and auto_novel.py
+def CIFAR10Loader(root, batch_size, split='train', num_workers=2,  aug=None, shuffle=True, target_list=range(5)):
+    # Called in supervised learning, target_list contains range with the indexes for the labeled classes.
+    # In the paper target_list=range(5), in this way the classes with labels will be [0,1,2,3,4]
+
+    # Instantiate the dataset (for supervised learning case the augmentation parameter is set to 'once')
+    dataset = CIFAR10Data(root, split, aug, target_list)
+    # Define the dataloader with the given parameters and return it
     loader = data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     return loader
-# used with auto class discovery
-def CIFAR10LoaderMix(root, batch_size, split='train',num_workers=2, aug=None, shuffle=True, labeled_list=range(5), unlabeled_list=range(5, 10), new_labels=None):
-    if aug==None:
+
+# Used only in auto_novel.py
+def CIFAR10LoaderMix(root, batch_size, split='train', num_workers=2, aug=None, shuffle=True, labeled_list=range(5), unlabeled_list=range(5, 10), new_labels=None):
+    # First choose the type of augmentation between none, once and twice
+    if aug is None:
         transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
         ])
-    elif aug=='once':
+    elif aug == 'once':
         transform = transforms.Compose([
             transforms.RandomCrop(32, padding=4),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
         ])
-    elif aug=='twice':
+    # Type of augmentation used in the mix_train_loader in the auto_novel.py file
+    elif aug == 'twice':
+        # Build the transform used to augment the examples
         transform = TransformTwice(transforms.Compose([
-            RandomTranslateWithReflect(4),# this is a function in the utils files. i think it is commented above the funciton some informaiton of what it does
-            # i donot want divide so deep in understanding how it works because it is not necessarly 
-            # it relects the picture . so oyu have 2 pictures notj ust 1 
-            transforms.RandomHorizontalFlip(),# part of pytorch 
-            transforms.ToTensor(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-        ]))# you apply this specific transformation for mix_train_loader for auto novel class discovery
-        # you call the cifar10 object which is a class in here. 
-    dataset_labeled = CIFAR10(root=root, split=split, transform=transform, target_list=labeled_list)# the first 5 classes
-    # dataset_labeled[0] is a tuple containing 3 things
-    # first it has tuple containing 2 tensor of (3,32,32) because each tuple is repeated twice with augmentation
-    # second it has class label as an integer
-    # third it has index of the picture
-    dataset_unlabeled = CIFAR10(root=root, split=split, transform=transform, target_list=unlabeled_list)# the last 5 classes
-    # so you have 2 dataset for both labeled and unlabled
-    if new_labels is not None:# we can pass some specific labels i donot know why but we can
+            # Translate the image vertically and horizontally by n pixels chosen in the interval between 0 and
+            # max_translation. Then fill the uncovered blank area with reflect padding
+            RandomTranslateWithReflect(max_translation=4),
+            transforms.RandomHorizontalFlip(),  # Perform a random horizontal flip
+            transforms.ToTensor(),  # Turn the image to tensor
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),  # Normalize using mean and std
+        ]))
+
+    # Define a labeled dataset calling the CIFAR10 class, we pass target_list=labeled_list to choose the first 5 classes
+    dataset_labeled = CIFAR10(root=root, split=split, transform=transform, target_list=labeled_list)
+    # Each dataset_labeled[i] is a tuple containing 3 things:
+    # - A tuple containing 2 tensor of (3,32,32) which are the original image and its augmentation
+    # - A class label as an integer
+    # - The index of the picture in the original dataset (CIFAR10)
+
+    # Define an unlabeled dataset calling the CIFAR10 class, target_list=unlabeled_list to choose the last 5 classes
+    dataset_unlabeled = CIFAR10(root=root, split=split, transform=transform, target_list=unlabeled_list)
+
+    # If we have some addition input labels they are applied and used as targets
+    if new_labels is not None:
         dataset_unlabeled.targets = new_labels
-    # dataset_labeled.targets has size of 25000
-    # dataset_unlabeled.targets has size of 25000
-    # dataset_labeled.data has size of (25000, 32, 32, 3)
-    # dataset_unlabeled.data has size of (25000, 32, 32, 3)
-    dataset_labeled.targets = np.concatenate((dataset_labeled.targets,dataset_unlabeled.targets))# the labels with numpy size of (50000,)
-    dataset_labeled.data = np.concatenate((dataset_labeled.data,dataset_unlabeled.data),0)# numpy array of size of (50000, 32, 32, 3)
-    # first half is labled and second half is unlabled
+
+    # Now we have 2 dataset one for labeled and one for unlabeled data, here:
+    # - dataset_labeled.data has size of (25000, 32, 32, 3)
+    # - dataset_labeled.targets has size of 25000
+    # - dataset_unlabeled.data has size of (25000, 32, 32, 3)
+    # - dataset_unlabeled.targets has size of 25000
+    # These two datasets are concatenated in a two unique dataset (one for targets and one for data), now we have:
+    # - dataset_unlabeled.data has size of (50000, 32, 32, 3)
+    # - dataset_unlabeled.targets has size of 50000
+    # Of this dataset the first half is labeled while the second half is unlabeled
+    dataset_labeled.targets = np.concatenate((dataset_labeled.targets, dataset_unlabeled.targets))
+    dataset_labeled.data = np.concatenate((dataset_labeled.data, dataset_unlabeled.data), 0)
+
+    # Instantiate a dataloader for that dataset with the specific batch_size and enabling shuffle to mix the order of
+    # the labeled and the unlabeled samples. Finally return this loader
     loader = data.DataLoader(dataset_labeled, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     return loader
 
-def CIFAR10LoaderTwoStream(root, batch_size, split='train',num_workers=2, aug=None, shuffle=True, labeled_list=range(5), unlabeled_list=range(5, 10), unlabeled_batch_size=64):
+def CIFAR10LoaderTwoStream(root, batch_size, split='train', num_workers=2, aug=None, shuffle=True, labeled_list=range(5), unlabeled_list=range(5, 10), unlabeled_batch_size=64):
     dataset_labeled = CIFAR10Data(root, split, aug, labeled_list)
     dataset_unlabeled =  CIFAR10Data(root, split, aug, unlabeled_list)
     dataset = ConcatDataset((dataset_labeled, dataset_unlabeled))
@@ -344,7 +368,8 @@ def CIFAR100Data(root, split='train', aug=None, target_list=range(80)):
         ]))
     dataset = CIFAR100(root=root, split=split, transform=transform, target_list=target_list)
     return dataset
-# used with cifar 100 in supervised learning 
+
+# used with cifar 100 in supervised learning
 def CIFAR100Loader(root, batch_size, split='train', num_workers=2,  aug=None, shuffle=True, target_list=range(80)):
     dataset = CIFAR100Data(root, split, aug,target_list)
     loader = data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)# returns the data laoder
