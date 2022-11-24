@@ -175,18 +175,23 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
             # Compute the Binary Cross entropy (BCE) loss over the labeled sample (using the tensor mask to slice them)
             loss_bce = criterion2(prob1_ulb, prob2_ulb, target_ulb)
             # Compute the Mean Squared error (MSE) loss used as consistency loss between base samples and augmented ones
-            consistency_loss_c1 = F.mse_loss(prob1, prob1_bar)
-            consistency_loss_c2 = F.mse_loss(prob2, prob2_bar)
-            consistency_loss =  consistency_loss_c1 + consistency_loss_c2
+            ## csonsitencey loss start
+            # consistency_loss_c1 = F.mse_loss(prob1, prob1_bar)
+            # consistency_loss_c2 = F.mse_loss(prob2, prob2_bar)
+            # consistency_loss =  consistency_loss_c1 + consistency_loss_c2
+            ## consistence loss end 
             # consistency_loss =F.mse_loss(prob1, prob1_bar)+F.mse_loss(prob2, prob2_bar)
             # Add up, apply weights and compute the final loss. Then update the loss AverageMeter with that value
-            loss = loss_ce + loss_bce + w * consistency_loss
+            # orginal loss
+            # loss = loss_ce + loss_bce + w * consistency_loss
+            # loss without consisitency loss
+            loss = loss_ce + loss_bce 
             loss_record.update(loss.item(), x.size(0))
             loss_record_CEL.update(loss_ce.item(), x.size(0))
             loss_record_BCE.update(loss_bce.item(), x.size(0))
-            loss_record_CON_1.update(consistency_loss_c1.item(), x.size(0))
-            loss_record_CON_2.update(consistency_loss_c2.item(), x.size(0))
-            loss_record_CON_total.update(consistency_loss.item(), x.size(0))
+            # loss_record_CON_1.update(consistency_loss_c1.item(), x.size(0))
+            # loss_record_CON_2.update(consistency_loss_c2.item(), x.size(0))
+            # loss_record_CON_total.update(consistency_loss.item(), x.size(0))
             # Zero the gradient of the optimizer, back-propagate the loss and perform an optimization step
             optimizer.zero_grad()
             loss.backward()
@@ -322,9 +327,9 @@ def test(model, test_loader, args):
         # Convert tensor to numpy using 'label.cpu.numpy', then append the value in the respective numpy array
         if args.head == 'head1':
             acc_testing = accuracy(output, label) # calculating the accuracy
+            acc_record.update(acc_testing[0].item(),x.size(0))
         else :
             acc_testing=0
-        acc_record.update(acc_testing[0].item(),x.size(0))
         targets = np.append(targets, label.cpu().numpy())
         preds = np.append(preds, pred.cpu().numpy())
 
@@ -409,6 +414,7 @@ if __name__ == "__main__":
     "IL":args.IL,
     "mode":args.mode
     }
+    wandb.init(project="trends_project", entity="mhaggag96", config = config, save_code = True)
 
     # If we are in training mode
     if args.mode == 'train':
