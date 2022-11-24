@@ -203,19 +203,19 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
         # Set the head argument to 'head1', this to ensure that we test the supervised head in the training step below
         print('test on labeled classes')
         args.head = 'head1'
-        acc_H1,nmi_H1,ari_H1=test(model, labeled_eval_loader, args)
+        acc_H1,nmi_H1,ari_H1,acc_testing_H1=test(model, labeled_eval_loader, args)
 
         # Set the head argument to 'head2', this to ensure that we test the unsupervised head in the training step below
         print('test on unlabeled classes')
         args.head = 'head2'
-        acc_H2,nmi_H2,ari_H2=test(model, unlabeled_eval_loader, args)
+        acc_H2,nmi_H2,ari_H2,acc_testing_H2=test(model, unlabeled_eval_loader, args)
             # Print the result of the testing procedure obtained computing the three metrics above
         wandb.log({"epoch": epoch,"Total_average_loss":loss_record.avg,"Cross_entropy_loss":loss_record_CEL.avg,
                    "Binary_cross_entropy_loss":loss_record_BCE.avg,"Consistency_loss_part_a":loss_record_CON_1.avg,
                    "Consistency_loss_part_b":loss_record_CON_2.avg,"Consistency_loss_total":loss_record_CON_total.avg,
                    "Head_1_training_accuracy":acc_record.avg,
-                   "cluster_acc_Head_1": acc_H1,"nmi_Head_1":nmi_H1,"ari_Head_1":ari_H1,
-                   "cluster_acc_Head_2": acc_H2,"nmi_Head_2":nmi_H2,"ari_Head_2":ari_H2}, step = epoch)
+                   "cluster_acc_Head_1": acc_H1,"nmi_Head_1":nmi_H1,"ari_Head_1":ari_H1,"testing_acc_Head_1":acc_testing_H1,
+                   "cluster_acc_Head_2": acc_H2,"nmi_Head_2":nmi_H2,"ari_Head_2":ari_H2,"testing_acc_Head_2":acc_testing_H2,"lr":exp_lr_scheduler.get_last_lr()[0]}, step = epoch)
 
 
 def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args):
@@ -292,6 +292,8 @@ def test(model, test_loader, args):
     # Instantiate two numpy arrays, one for predictions and oen for targets
     preds = np.array([])
     targets = np.array([])
+    acc_record = AverageMeter() # track the accuracy of the first head
+    # loss_record = AverageMeter()
 
     # Iterate for each batch in the dataloader
     for batch_idx, (x, label, _) in enumerate(tqdm(test_loader)):
@@ -317,6 +319,8 @@ def test(model, test_loader, args):
         _, pred = output.max(1)
 
         # Convert tensor to numpy using 'label.cpu.numpy', then append the value in the respective numpy array
+        acc_testing = accuracy(output, label) # calculating the accuracy  
+        acc_record.update(acc_testing[0].item(),x.size(0))
         targets = np.append(targets, label.cpu().numpy())
         preds = np.append(preds, pred.cpu().numpy())
 
@@ -327,8 +331,8 @@ def test(model, test_loader, args):
     # else:
         # wandb.log({"cluster_acc_Head_2_test": acc,"nmi_Head_2":nmi,"ari_Head_2_test":ari}, step = current_epoch)
 
-    print('Test acc {:.4f}, nmi {:.4f}, ari {:.4f}'.format(acc, nmi, ari))
-    return acc, nmi, ari 
+    print('Test cluster acc {:.4f}, nmi {:.4f}, ari {:.4f}, test accuracy {:.4f}'.format(acc, nmi, ari,acc_record.avg))
+    return acc, nmi, ari,acc_record.avg
 
 
 if __name__ == "__main__":
@@ -525,7 +529,6 @@ if __name__ == "__main__":
         test(model, all_eval_loader, args)
 
     # Then test the model using head2 over the unlabeled dataloader
-    wandb.finish()
     print('Evaluating on Head2')
     args.head = 'head2'
     print('test on unlabeled classes (train split)')
@@ -533,3 +536,4 @@ if __name__ == "__main__":
     args.head = 'testing'
     print('test on unlabeled classes (test split)')
     test(model, unlabeled_eval_loader_test, args)
+    wandb.finish()
