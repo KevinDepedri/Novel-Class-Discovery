@@ -208,14 +208,14 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
         # Set the head argument to 'head2', this to ensure that we test the unsupervised head in the training step below
         print('test on unlabeled classes')
         args.head = 'head2'
-        acc_H2,nmi_H2,ari_H2,acc_testing_H2=test(model, unlabeled_eval_loader, args)
+        acc_H2,nmi_H2,ari_H2,_=test(model, unlabeled_eval_loader, args)
             # Print the result of the testing procedure obtained computing the three metrics above
         wandb.log({"epoch": epoch,"Total_average_loss":loss_record.avg,"Cross_entropy_loss":loss_record_CEL.avg,
                    "Binary_cross_entropy_loss":loss_record_BCE.avg,"Consistency_loss_part_a":loss_record_CON_1.avg,
                    "Consistency_loss_part_b":loss_record_CON_2.avg,"Consistency_loss_total":loss_record_CON_total.avg,
                    "Head_1_training_accuracy":acc_record.avg,
                    "cluster_acc_Head_1": acc_H1,"nmi_Head_1":nmi_H1,"ari_Head_1":ari_H1,"testing_acc_Head_1":acc_testing_H1,
-                   "cluster_acc_Head_2": acc_H2,"nmi_Head_2":nmi_H2,"ari_Head_2":ari_H2,"testing_acc_Head_2":acc_testing_H2,"lr":exp_lr_scheduler.get_last_lr()[0]}, step = epoch)
+                   "cluster_acc_Head_2": acc_H2,"nmi_Head_2":nmi_H2,"ari_Head_2":ari_H2,"lr":exp_lr_scheduler.get_last_lr()[0]}, step = epoch)
 
 
 def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args):
@@ -312,6 +312,7 @@ def test(model, test_loader, args):
         # Otherwise, we take as final output the result of the unsupervised head
         else:
             output = output2
+            # label-=args.num_labeled_classes
 
         # Returns the maximum value for each element in the input tensor, therefore we move from size (128,5) to (128)
         # Here we are not interested in the value, so we put '_' for the first term. We are interested in the second
@@ -319,7 +320,10 @@ def test(model, test_loader, args):
         _, pred = output.max(1)
 
         # Convert tensor to numpy using 'label.cpu.numpy', then append the value in the respective numpy array
-        acc_testing = accuracy(output, label) # calculating the accuracy  
+        if args.head == 'head1':
+            acc_testing = accuracy(output, label) # calculating the accuracy
+        else :
+            acc_testing=0
         acc_record.update(acc_testing[0].item(),x.size(0))
         targets = np.append(targets, label.cpu().numpy())
         preds = np.append(preds, pred.cpu().numpy())
@@ -393,9 +397,18 @@ if __name__ == "__main__":
     "dataset":args.dataset_name,
     "unlabled_classes":args.num_unlabeled_classes,
     "labled_classes" :args.num_labeled_classes,
-    "topk":args.topk}
-  
-    wandb.init(project="trends_project", entity="mhaggag96", config = config, save_code = True)
+    "topk":args.topk,
+    "momentum":args.momentum,
+    "weight_decay":args.weight_decay,
+    "epochs":args.epochs,
+    "rampup_length":args.rampup_length,
+    "rampup_coefficient":args.rampup_coefficient,
+    "increment_coefficient":args.increment_coefficient,
+    "rampup_coefficient":args.rampup_coefficient,
+    "step_size":args.step_size,
+    "IL":args.IL,
+    "mode":args.mode
+    }
 
     # If we are in training mode
     if args.mode == 'train':
