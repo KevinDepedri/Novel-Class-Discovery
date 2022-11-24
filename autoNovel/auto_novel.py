@@ -15,8 +15,10 @@ import numpy as np
 import os
 # wandb importing
 import wandb
+import random
 # global current_epoch
 # Auto-novel training without incremental learning (IL)
+global logging_on
 def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args):
     # Instantiate SGD optimizer with input learning rate, momentum and weight_decay
     optimizer = SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
@@ -115,22 +117,22 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
                     #        [11, 12, 13, 14, 15]]) it is tensoe 3,5
             # x1,x2 =PairEnum(x)
             # x1 will be size of (9,5) and it will look like this
-            # x1 =tensor([[1, 2,3, 4, 5],
-                    #        [6, 7, 8, 9, 10],
-                    #        [11, 12, 13, 14, 15],
-                    #        [1, 2,3, 4, 5],
+            # x1 =tensor([[1, 2,3, 4, 5]image1,
+                    #        [6, 7, 8, 9, 10]image2,
+                    #        [11, 12, 13, 14, 15]image3,
+                    #        [1, 2,3, 4, 5]image,
                     #        [6, 7, 8, 9, 10],
                     #        [11, 12, 13, 14, 15],
                     #        [1, 2,3, 4, 5],
                     #        [6, 7, 8, 9, 10],
                     #        [11, 12, 13, 14, 15]])
             # x2 will be size of (9,5) and it look like this
-            # x2 =tensor([[1, 2,3, 4, 5],
-            #             [1, 2,3, 4, 5],
-            #             [1, 2,3, 4, 5],
-            #             [6, 7, 8, 9, 10],
-            #             [6, 7, 8, 9, 10],
-            #             [6, 7, 8, 9, 10],
+            # x2 =tensor([[1, 2,3, 4, 5]image1,
+            #             [1, 2,3, 4, 5]image1,
+            #             [1, 2,3, 4, 5]image1,
+            #             [6, 7, 8, 9, 10]image2,
+            #             [6, 7, 8, 9, 10]image2,
+            #             [6, 7, 8, 9, 10]image2,
             #             [11, 12, 13, 14, 15],
             #             [11, 12, 13, 14, 15],
             #             [11, 12, 13, 14, 15]])
@@ -176,22 +178,25 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
             loss_bce = criterion2(prob1_ulb, prob2_ulb, target_ulb)
             # Compute the Mean Squared error (MSE) loss used as consistency loss between base samples and augmented ones
             ## csonsitencey loss start
-            # consistency_loss_c1 = F.mse_loss(prob1, prob1_bar)
-            # consistency_loss_c2 = F.mse_loss(prob2, prob2_bar)
-            # consistency_loss =  consistency_loss_c1 + consistency_loss_c2
+            consistency_loss_c1 = F.mse_loss(prob1, prob1_bar)
+            consistency_loss_c2 = F.mse_loss(prob2, prob2_bar)
+            consistency_loss =  consistency_loss_c1 + consistency_loss_c2
             ## consistence loss end 
             # consistency_loss =F.mse_loss(prob1, prob1_bar)+F.mse_loss(prob2, prob2_bar)
             # Add up, apply weights and compute the final loss. Then update the loss AverageMeter with that value
             # orginal loss
-            # loss = loss_ce + loss_bce + w * consistency_loss
+            # jaccopo 
+            alpha = random.uniform(0, 1)
+            beta  = 1-alpha
+            loss  = alpha*loss_ce + beta*loss_bce + w * consistency_loss
             # loss without consisitency loss
-            loss = loss_ce + loss_bce 
+            # loss = loss_ce + loss_bce 
             loss_record.update(loss.item(), x.size(0))
             loss_record_CEL.update(loss_ce.item(), x.size(0))
             loss_record_BCE.update(loss_bce.item(), x.size(0))
-            # loss_record_CON_1.update(consistency_loss_c1.item(), x.size(0))
-            # loss_record_CON_2.update(consistency_loss_c2.item(), x.size(0))
-            # loss_record_CON_total.update(consistency_loss.item(), x.size(0))
+            loss_record_CON_1.update(consistency_loss_c1.item(), x.size(0))
+            loss_record_CON_2.update(consistency_loss_c2.item(), x.size(0))
+            loss_record_CON_total.update(consistency_loss.item(), x.size(0))
             # Zero the gradient of the optimizer, back-propagate the loss and perform an optimization step
             optimizer.zero_grad()
             loss.backward()
@@ -215,7 +220,8 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
         args.head = 'head2'
         acc_H2,nmi_H2,ari_H2,_=test(model, unlabeled_eval_loader, args)
             # Print the result of the testing procedure obtained computing the three metrics above
-        wandb.log({"epoch": epoch,"Total_average_loss":loss_record.avg,"Cross_entropy_loss":loss_record_CEL.avg,
+        if logging_on:
+            wandb.log({"epoch": epoch,"Total_average_loss":loss_record.avg,"Cross_entropy_loss":loss_record_CEL.avg,
                    "Binary_cross_entropy_loss":loss_record_BCE.avg,"Consistency_loss_part_a":loss_record_CON_1.avg,
                    "Consistency_loss_part_b":loss_record_CON_2.avg,"Consistency_loss_total":loss_record_CON_total.avg,
                    "Head_1_training_accuracy":acc_record.avg,
@@ -370,6 +376,7 @@ if __name__ == "__main__":
     parser.add_argument('--dataset_name', type=str, default='cifar10',  help='options: cifar10, cifar100, svhn')  # Name of the used dataset
     parser.add_argument('--seed', default=1, type=int)  # Seed to use
     parser.add_argument('--mode', type=str, default='train')  # Mode: train or test
+    logging_on = True # variable to stop  logging when I donot want to log anything
     # Extract the args and make them available in the args object
     args = parser.parse_args()
     # Define if cuda can be used and initialize the device used by torch. Furthermore, specify the torch seed
@@ -395,26 +402,27 @@ if __name__ == "__main__":
     # Compute the total number of classes
     num_classes = args.num_labeled_classes + args.num_unlabeled_classes
     # to login into wandb this is the password
-    wandb.login() #4619e908b2f2c21261030dae4c66556d4f1f3178
-    config = {
-    "learning_rate":args.lr,
-    "batch_size":args.batch_size,
-    "dataset":args.dataset_name,
-    "unlabled_classes":args.num_unlabeled_classes,
-    "labled_classes" :args.num_labeled_classes,
-    "topk":args.topk,
-    "momentum":args.momentum,
-    "weight_decay":args.weight_decay,
-    "epochs":args.epochs,
-    "rampup_length":args.rampup_length,
-    "rampup_coefficient":args.rampup_coefficient,
-    "increment_coefficient":args.increment_coefficient,
-    "rampup_coefficient":args.rampup_coefficient,
-    "step_size":args.step_size,
-    "IL":args.IL,
-    "mode":args.mode
-    }
-    wandb.init(project="trends_project", entity="mhaggag96", config = config, save_code = True)
+    if logging_on:
+        wandb.login() #4619e908b2f2c21261030dae4c66556d4f1f3178
+        config = {
+        "learning_rate":args.lr,
+        "batch_size":args.batch_size,
+        "dataset":args.dataset_name,
+        "unlabled_classes":args.num_unlabeled_classes,
+        "labled_classes" :args.num_labeled_classes,
+        "topk":args.topk,
+        "momentum":args.momentum,
+        "weight_decay":args.weight_decay,
+        "epochs":args.epochs,
+        "rampup_length":args.rampup_length,
+        "rampup_coefficient":args.rampup_coefficient,
+        "increment_coefficient":args.increment_coefficient,
+        "rampup_coefficient":args.rampup_coefficient,
+        "step_size":args.step_size,
+        "IL":args.IL,
+        "mode":args.mode
+        }
+        wandb.init(project="trends_project", entity="mhaggag96", config = config, save_code = True)
 
     # If we are in training mode
     if args.mode == 'train':
@@ -555,4 +563,5 @@ if __name__ == "__main__":
     args.head = 'testing'
     print('test on unlabeled classes (test split)')
     test(model, unlabeled_eval_loader_test, args)
-    wandb.finish()
+    if logging_on:
+        wandb.finish()
