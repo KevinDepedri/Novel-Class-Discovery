@@ -186,9 +186,9 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
             # Add up, apply weights and compute the final loss. Then update the loss AverageMeter with that value
             # orginal loss
             # jaccopo 
-            alpha = random.uniform(0, 1)
-            beta  = 1-alpha
-            loss  = alpha*loss_ce + beta*loss_bce + w * consistency_loss
+            # alpha = random.uniform(0, 1)
+            # beta  = 1-alpha
+            loss  = loss_ce + loss_bce + w * consistency_loss
             # loss without consisitency loss
             # loss = loss_ce + loss_bce 
             loss_record.update(loss.item(), x.size(0))
@@ -236,6 +236,14 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
     criterion2 = BCE()
     for epoch in range(args.epochs):
         loss_record = AverageMeter()
+        loss_record_CEL = AverageMeter()   # average metter to follow the cross entropy loss
+        loss_record_BCE = AverageMeter()   # average meter to follow the binary cross entropy loss
+        loss_record_CON_1 = AverageMeter() # average meter to follow the first paramter of consistency loss
+        loss_record_CON_2 = AverageMeter() # average meter to follow the second paramter of consistency loss
+        loss_record_CON_total = AverageMeter() # average meter to follow the total of consistency loss
+        loss_record_IL = AverageMeter() # average meter to follow the incrementeal learning
+
+        acc_record = AverageMeter() # track the accuracy of the first head
         model.train()
         w = args.rampup_coefficient * ramps.sigmoid_rampup(epoch, args.rampup_length)
         for batch_idx, ((x, x_bar), label, idx) in enumerate(tqdm(train_loader)):
@@ -279,11 +287,18 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
             loss_ce_add = w * criterion1(output1[~mask_lb],label[~mask_lb]) / args.rampup_coefficient * args.increment_coefficient
 
             loss_bce = criterion2(prob1_ulb, prob2_ulb, target_ulb)  # binary cross entropy
-            consistency_loss = F.mse_loss(prob1, prob1_bar) + F.mse_loss(prob2, prob2_bar)  # between label data or unlabled data
-
+            consistency_loss_c1 = F.mse_loss(prob1, prob1_bar)
+            consistency_loss_c2 = F.mse_loss(prob2, prob2_bar)
+            consistency_loss =  consistency_loss_c1 + consistency_loss_c2
             loss = loss_ce + loss_bce + loss_ce_add + w * consistency_loss
 
             loss_record.update(loss.item(), x.size(0))
+            loss_record_IL.update(loss_ce_add.item(), x.size(0))
+            loss_record_CEL.update(loss_ce.item(), x.size(0))
+            loss_record_BCE.update(loss_bce.item(), x.size(0))
+            loss_record_CON_1.update(consistency_loss_c1.item(), x.size(0))
+            loss_record_CON_2.update(consistency_loss_c2.item(), x.size(0))
+            loss_record_CON_total.update(consistency_loss.item(), x.size(0))
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -291,10 +306,18 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
         print('Train Epoch: {} Avg Loss: {:.4f}'.format(epoch, loss_record.avg))
         print('test on labeled classes')
         args.head = 'head1'
-        test(model, labeled_eval_loader, args)
+        acc_H1,nmi_H1,ari_H1,acc_testing_H1=test(model, labeled_eval_loader, args)
         print('test on unlabeled classes')
         args.head = 'head2'
-        test(model, unlabeled_eval_loader, args)
+        acc_H2,nmi_H2,ari_H2,_=test(model, unlabeled_eval_loader, args)
+        if logging_on:
+            wandb.log({"epoch": epoch,"Total_average_loss":loss_record.avg,"Cross_entropy_loss":loss_record_CEL.avg,
+                   "Binary_cross_entropy_loss":loss_record_BCE.avg,"Consistency_loss_part_a":loss_record_CON_1.avg,
+                   "Consistency_loss_part_b":loss_record_CON_2.avg,"Consistency_loss_total":loss_record_CON_total.avg,
+                   "Head_1_training_accuracy":acc_record.avg,
+                   "cluster_acc_Head_1": acc_H1,"nmi_Head_1":nmi_H1,"ari_Head_1":ari_H1,"testing_acc_Head_1":acc_testing_H1,
+                   "cluster_acc_Head_2": acc_H2,"nmi_Head_2":nmi_H2,"ari_Head_2":ari_H2,"lr":exp_lr_scheduler.get_last_lr()[0],
+                   "incremental_loss":loss_record_IL}, step = epoch)
 
 
 def test(model, test_loader, args):
@@ -343,8 +366,6 @@ def test(model, test_loader, args):
     acc, nmi, ari = cluster_acc(targets.astype(int), preds.astype(int)), nmi_score(targets, preds), ari_score(targets, preds)
 
 
-    # else:
-        # wandb.log({"cluster_acc_Head_2_test": acc,"nmi_Head_2":nmi,"ari_Head_2_test":ari}, step = current_epoch)
 
     print('Test cluster acc {:.4f}, nmi {:.4f}, ari {:.4f}, test accuracy {:.4f}'.format(acc, nmi, ari,acc_record.avg))
     return acc, nmi, ari,acc_record.avg
