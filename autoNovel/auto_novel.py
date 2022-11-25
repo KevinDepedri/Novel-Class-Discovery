@@ -317,7 +317,7 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
                    "Head_1_training_accuracy":acc_record.avg,
                    "cluster_acc_Head_1": acc_H1,"nmi_Head_1":nmi_H1,"ari_Head_1":ari_H1,"testing_acc_Head_1":acc_testing_H1,
                    "cluster_acc_Head_2": acc_H2,"nmi_Head_2":nmi_H2,"ari_Head_2":ari_H2,"lr":exp_lr_scheduler.get_last_lr()[0],
-                   "incremental_loss":loss_record_IL}, step = epoch)
+                   "incremental_loss":loss_record_IL.avg}, step = epoch)
 
 
 def test(model, test_loader, args):
