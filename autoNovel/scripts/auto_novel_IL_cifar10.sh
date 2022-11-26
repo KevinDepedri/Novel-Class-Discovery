@@ -17,4 +17,5 @@ python auto_novel.py \
         --increment_coefficient 0.05 \
         --seed 0 \
         --model_name resnet_IL_cifar10 \
-        --mode train
+        --mode train \
+        --topk 1

@@ -125,13 +125,18 @@ class BCE(nn.Module):
                                                                                             str(len(simi)))
         # make sure that everything has the same size
         # simi is a 1d vector
+        # Orginal
         P = prob1.mul_(prob2)  # multiply(4624,5) by another matrix same size
+        P = P.sum(1)  # sum along axis 1 so you have size fo 4624
+        # Experiment
+        # cos = torch.nn.CosineSimilarity(dim=1, eps=1e-6)
+        # pdist = nn.PairwiseDistance(p=2)
+        # P   = pdist(prob1,prob2)
         # i have some probabilities from first picture
         # i have some probabilities from second picture
         # we can say i am multiply probability matrix for all picture in first augmentation
         # with first probability tensor for second augmentation
         # tensor for second augmentation you do that for all X matrix you have.
-        P = P.sum(1)  # sum along axis 1 so you have size fo 4624
         # you have a vector of size 4624
         # you multiply simi by P then you add to it
         # simi has shape as P 

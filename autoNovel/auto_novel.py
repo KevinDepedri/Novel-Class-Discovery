@@ -275,7 +275,8 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
             loss_ce = criterion1(output1[mask_lb], label[mask_lb])  # crosss entropy loss for supervised part
             # all above very similar to before 
      
-
+            acc = accuracy(output1[mask_lb], label[mask_lb]) # calculating the accuracy  
+            acc_record.update(acc[0].item(),x.size(0))
             # mask_lb used to access unlabeled stuff.
             # (output2[~mask_lb]).detach().max(1)[1] you have 62*5 tensor you removed gradient return the biggest tensor.
             # but I want to return the index of biggest not the values so i expect to have values between 0 and 5
