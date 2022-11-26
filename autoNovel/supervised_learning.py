@@ -235,25 +235,26 @@ if __name__ == "__main__":
     # Compute the total number of classes
     num_classes = args.num_labeled_classes + args.num_unlabeled_classes
     # The commented part OK
-    # Load the weights for the ResNet model from the self-supervised previously trained model (selfsupervised_learning.py)
-    # state_dict = torch.load(args.rotnet_dir)
-    # # Delete the old linear head parameters. It was used just to perform semi-supervised learning (to predict rotation)
-    # del state_dict['linear.weight']  # Size of the old head was [4,512]
-    # del state_dict['linear.bias']  # Deleted not only weights but also the biases [4]
-    # # After this operation we no longer have any weights or biases in the end. They are completely deleted, we are ready
-    # # to learn the weights for the two new heads.
+    # Load the weights
+    # for the ResNet model from the self-supervised previously trained model (selfsupervised_learning.py)
+    state_dict = torch.load(args.rotnet_dir)
+    # Delete the old linear head parameters. It was used just to perform semi-supervised learning (to predict rotation)
+    del state_dict['linear.weight']  # Size of the old head was [4,512]
+    del state_dict['linear.bias']  # Deleted not only weights but also the biases [4]
+    # After this operation we no longer have any weights or biases in the end. They are completely deleted, we are ready
+    # to learn the weights for the two new heads.
 
-    # # Apply the loaded weights to the model, we do not strictly enforce that the keys in state_dict match since the old
-    # # model has one head that was removed, while the new model has two new heads. Therefore, hey cannot fully match
-    # model.load_state_dict(state_dict, strict=False)
+    # Apply the loaded weights to the model, we do not strictly enforce that the keys in state_dict match since the old
+    # model has one head that was removed, while the new model has two new heads. Therefore, hey cannot fully match
+    model.load_state_dict(state_dict, strict=False)
 
-    # # Iterate through all the parameters of the new model
-    # for name, param in model.named_parameters():
-    #     # If the parameter under analysis does not belong to 'head' (one of the two heads) or to 'layer4' (features
-    #     # layer before the two heads), then freeze that parameter. In this way we are ensuring that all the parameters
-    #     # will be frozen except for the two heads and the features layer, which we want to train.
-    #     if 'head' not in name and 'layer4' not in name:
-    #         param.requires_grad = False
+    # Iterate through all the parameters of the new model
+    for name, param in model.named_parameters():
+        # If the parameter under analysis does not belong to 'head' (one of the two heads) or to 'layer4' (features
+        # layer before the two heads), then freeze that parameter. In this way we are ensuring that all the parameters
+        # will be frozen except for the two heads and the features layer, which we want to train.
+        if 'head' not in name and 'layer4' not in name:
+            param.requires_grad = False
 
     # If the dataset argument is 'cifar10' then use its apposite loader, see cifarloader.py for full explanation
     if args.dataset_name == 'cifar10':
