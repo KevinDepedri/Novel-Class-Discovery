@@ -172,7 +172,6 @@ def test(model, test_loader, args):
     # Print the result of the testing procedure obtained computing the three metrics above
     # print('Test acc {:.4f}, nmi {:.4f}, ari {:.4f}'.format(acc, nmi, ari))
     print('Test cluster acc {:.4f}, nmi {:.4f}, ari {:.4f}, test accuracy {:.4f}'.format(acc, nmi, ari,acc_record.avg))
-
     return acc, nmi,ari,acc_record.avg
 
 
