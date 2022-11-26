@@ -18,4 +18,4 @@ python auto_novel.py \
         --seed 0 \
         --model_name resnet_IL_cifar10 \
         --mode train \
-        --topk 1
+        --topk 3
