@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from torch.optim import SGD, lr_scheduler
 from sklearn.metrics.cluster import normalized_mutual_info_score as nmi_score
 from sklearn.metrics import adjusted_rand_score as ari_score
-from utils.util import cluster_acc, Identity, AverageMeter
+from utils.util import cluster_acc, Identity, AverageMeter,accuracy
 from models.resnet import ResNet, BasicBlock 
 from data.cifarloader import CIFAR10Loader, CIFAR100Loader
 from data.svhnloader import SVHNLoader
@@ -12,6 +12,12 @@ from tqdm import tqdm
 import numpy as np
 import os
 
+#forlogging
+import wandb
+import random
+# global current_epoch
+# Auto-novel training without incremental learning (IL)
+global logging_on
 '''
 Self supervised learning (as from section 2.1 of AutoNovel paper) - part 2
 The function ηl ◦ Φ is fine-tuned on the labelled dataset Dl in order to learn a classifier for the Cl known classes,
@@ -36,6 +42,7 @@ def train(model, train_loader, labeled_eval_loader, args):
     for epoch in range(args.epochs):
         # Define an instance of AverageMeter to compute and store the average and current values of the loss
         loss_record = AverageMeter()
+        accuracy_record = AverageMeter()
         # Set the model in the training mode
         model.train()
 
@@ -52,22 +59,28 @@ def train(model, train_loader, labeled_eval_loader, args):
             # Compute the CE loss and update the loss AverageMeter with that value of loss
             loss = criterion1(output1, label)
             loss_record.update(loss.item(), x.size(0))
-
+            acc = accuracy(output1, label) # calculating the accuracy  
+            accuracy_record.update(acc[0].item(),x.size(0))
             # Zero the gradient of the optimizer, back-propagate the loss and perform an optimization step
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
             # Perform a step on the input exp_lr_scheduler (scheduler used to define the learning rate)
-            exp_lr_scheduler.step()  # FIXME: Put here to avoid warning, if there are problems move it back above
-
+        
+        exp_lr_scheduler.step()  # FIXME: Put here to avoid warning, if there are problems move it back above
         # Print the result of the training procedure over that epoch
         print('Train Epoch: {} Avg Loss: {:.4f}'.format(epoch, loss_record.avg))
 
         # Set the head argument to 'head1', this to ensure that we test the supervised head in the training step below
         print('test on labeled classes')
         args.head = 'head1'
-        test(model, labeled_eval_loader, args)
+        acc_H1,nmi_H1,ari_H1,acc_testing_H1=test(model, labeled_eval_loader, args)
+        if logging_on:
+            wandb.log({"epoch": epoch,"Total_average_loss":loss_record.avg,
+                   "Head_1_training_accuracy":accuracy_record.avg,
+                   "cluster_acc_Head_1": acc_H1,"nmi_Head_1":nmi_H1,"ari_Head_1":ari_H1,"testing_acc_Head_1":acc_testing_H1,
+                   "lr":exp_lr_scheduler.get_last_lr()[0]}, step = epoch)
 # TO_UNDERSTAND: Since head1 is imposed before running the test step we are getting predictions performed by that head,
 # TO_UNDERSTAND: could it be that they are computing the clustering metrics
 # the question is why are we calculating accuracy of clusters in here??
@@ -84,6 +97,7 @@ def test(model, test_loader, args):
     # Instantiate two numpy arrays, one for predictions and oen for targets
     preds = np.array([])
     targets = np.array([])
+    acc_record = AverageMeter() # track the accuracy of the first head
 
     # Iterate for each batch in the dataloader
     for batch_idx, (x, label, _) in enumerate(tqdm(test_loader)):
@@ -109,6 +123,8 @@ def test(model, test_loader, args):
         _, pred = output.max(1)
 
         # Convert tensor to numpy using 'label.cpu.numpy', then append the value in the respective numpy array
+        acc_testing = accuracy(output, label) # calculating the accuracy
+        acc_record.update(acc_testing[0].item(),x.size(0))
         targets = np.append(targets, label.cpu().numpy())
         preds = np.append(preds, pred.cpu().numpy())
 
@@ -154,8 +170,10 @@ def test(model, test_loader, args):
     # -----------------------------------------------------------------------------------------------------------------
 
     # Print the result of the testing procedure obtained computing the three metrics above
-    print('Test acc {:.4f}, nmi {:.4f}, ari {:.4f}'.format(acc, nmi, ari))
-    return preds 
+    # print('Test acc {:.4f}, nmi {:.4f}, ari {:.4f}'.format(acc, nmi, ari))
+    print('Test cluster acc {:.4f}, nmi {:.4f}, ari {:.4f}, test accuracy {:.4f}'.format(acc, nmi, ari,acc_record.avg))
+
+    return acc, nmi,ari,acc_record.avg
 
 
 if __name__ == "__main__":
@@ -180,7 +198,22 @@ if __name__ == "__main__":
     parser.add_argument('--mode', type=str, default='train')  # Mode: train or test
     # Extract the args and make them available in the args object
     args = parser.parse_args()
-
+    logging_on= True
+    if logging_on:
+        wandb.login() #4619e908b2f2c21261030dae4c66556d4f1f3178
+        config = {
+        "learning_rate":args.lr,
+        "batch_size":args.batch_size,
+        "dataset":args.dataset_name,
+        "unlabled_classes":args.num_unlabeled_classes,
+        "labled_classes" :args.num_labeled_classes,
+        "momentum":args.momentum,
+        "weight_decay":args.weight_decay,
+        "epochs":args.epochs,
+        "step_size":args.step_size,
+        "mode":args.mode
+        }
+        wandb.init(project="trends_project", entity="mhaggag96", config = config, save_code = True)
     # Define if cuda can be used and initialize the device used by torch
     args.cuda = torch.cuda.is_available()
     device = torch.device("cuda" if args.cuda else "cpu")
@@ -202,26 +235,26 @@ if __name__ == "__main__":
 
     # Compute the total number of classes
     num_classes = args.num_labeled_classes + args.num_unlabeled_classes
-
+    # The commented part OK
     # Load the weights for the ResNet model from the self-supervised previously trained model (selfsupervised_learning.py)
-    state_dict = torch.load(args.rotnet_dir)
-    # Delete the old linear head parameters. It was used just to perform semi-supervised learning (to predict rotation)
-    del state_dict['linear.weight']  # Size of the old head was [4,512]
-    del state_dict['linear.bias']  # Deleted not only weights but also the biases [4]
-    # After this operation we no longer have any weights or biases in the end. They are completely deleted, we are ready
-    # to learn the weights for the two new heads.
+    # state_dict = torch.load(args.rotnet_dir)
+    # # Delete the old linear head parameters. It was used just to perform semi-supervised learning (to predict rotation)
+    # del state_dict['linear.weight']  # Size of the old head was [4,512]
+    # del state_dict['linear.bias']  # Deleted not only weights but also the biases [4]
+    # # After this operation we no longer have any weights or biases in the end. They are completely deleted, we are ready
+    # # to learn the weights for the two new heads.
 
-    # Apply the loaded weights to the model, we do not strictly enforce that the keys in state_dict match since the old
-    # model has one head that was removed, while the new model has two new heads. Therefore, hey cannot fully match
-    model.load_state_dict(state_dict, strict=False)
+    # # Apply the loaded weights to the model, we do not strictly enforce that the keys in state_dict match since the old
+    # # model has one head that was removed, while the new model has two new heads. Therefore, hey cannot fully match
+    # model.load_state_dict(state_dict, strict=False)
 
-    # Iterate through all the parameters of the new model
-    for name, param in model.named_parameters():
-        # If the parameter under analysis does not belong to 'head' (one of the two heads) or to 'layer4' (features
-        # layer before the two heads), then freeze that parameter. In this way we are ensuring that all the parameters
-        # will be frozen except for the two heads and the features layer, which we want to train.
-        if 'head' not in name and 'layer4' not in name:
-            param.requires_grad = False
+    # # Iterate through all the parameters of the new model
+    # for name, param in model.named_parameters():
+    #     # If the parameter under analysis does not belong to 'head' (one of the two heads) or to 'layer4' (features
+    #     # layer before the two heads), then freeze that parameter. In this way we are ensuring that all the parameters
+    #     # will be frozen except for the two heads and the features layer, which we want to train.
+    #     if 'head' not in name and 'layer4' not in name:
+    #         param.requires_grad = False
 
     # If the dataset argument is 'cifar10' then use its apposite loader, see cifarloader.py for full explanation
     if args.dataset_name == 'cifar10':
@@ -260,3 +293,5 @@ if __name__ == "__main__":
     print('test on labeled classes')
     args.head = 'head1'
     test(model, labeled_eval_loader, args)
+    if logging_on:
+        wandb.finish()
