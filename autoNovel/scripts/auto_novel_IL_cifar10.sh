@@ -4,6 +4,7 @@ python auto_novel.py \
         --dataset_root $1 \
         --exp_root $2 \
         --warmup_model_dir $3 \
+        --model_name $4 \
         --lr 0.1 \
         --gamma 0.1 \
         --weight_decay 1e-4 \
@@ -16,6 +17,5 @@ python auto_novel.py \
         --IL \
         --increment_coefficient 0.05 \
         --seed 0 \
-        --model_name resnet_IL_cifar10 \
         --mode train \
         --topk 5
