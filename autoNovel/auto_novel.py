@@ -272,7 +272,7 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
             prob1_ulb, _ = PairEnum(prob2[~mask_lb])
             _, prob2_ulb = PairEnum(prob2_bar[~mask_lb])
 
-            # loss_ce = criterion1(output1[mask_lb], label[mask_lb])  # crosss entropy loss for supervised part
+            loss_ce = criterion1(output1[mask_lb], label[mask_lb])  # crosss entropy loss for supervised part
             # all above very similar to before 
      
             acc = accuracy(output1[mask_lb], label[mask_lb]) # calculating the accuracy  
@@ -292,12 +292,11 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
             consistency_loss_c2 = F.mse_loss(prob2, prob2_bar)
             consistency_loss =  consistency_loss_c1 + consistency_loss_c2
             # loss = loss_ce  + loss_ce_add + w * consistency_loss
-            # loss = loss_ce + loss_bce + loss_ce_add + w * consistency_loss
-            loss =  loss_bce + loss_ce_add + w * consistency_loss
+            loss = loss_ce + loss_bce + loss_ce_add + w * consistency_loss
 
             loss_record.update(loss.item(), x.size(0))
             loss_record_IL.update(loss_ce_add.item(), x.size(0))
-            # loss_record_CEL.update(loss_ce.item(), x.size(0))
+            loss_record_CEL.update(loss_ce.item(), x.size(0))
             loss_record_BCE.update(loss_bce.item(), x.size(0))
             loss_record_CON_1.update(consistency_loss_c1.item(), x.size(0))
             loss_record_CON_2.update(consistency_loss_c2.item(), x.size(0))
