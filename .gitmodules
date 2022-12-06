@@ -1,0 +1,3 @@
+[submodule "UNO"]
+	path = UNO
+	url = https://github.com/DonkeyShot21/UNO.git
