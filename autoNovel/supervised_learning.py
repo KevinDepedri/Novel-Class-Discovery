@@ -4,13 +4,16 @@ import torch.nn.functional as F
 from torch.optim import SGD, lr_scheduler
 from sklearn.metrics.cluster import normalized_mutual_info_score as nmi_score
 from sklearn.metrics import adjusted_rand_score as ari_score
-from utils.util import cluster_acc, Identity, AverageMeter
-from models.resnet import ResNet, BasicBlock 
+from utils.util import cluster_acc, Identity, AverageMeter,accuracy
+from models.resnet import ResNet, BasicBlock,resnet_sim
 from data.cifarloader import CIFAR10Loader, CIFAR100Loader
 from data.svhnloader import SVHNLoader
 from tqdm import tqdm
 import numpy as np
 import os
+#forlogging
+import wandb
+global logging_on
 
 '''
 Self supervised learning (as from section 2.1 of AutoNovel paper) - part 2
@@ -36,6 +39,7 @@ def train(model, train_loader, labeled_eval_loader, args):
     for epoch in range(args.epochs):
         # Define an instance of AverageMeter to compute and store the average and current values of the loss
         loss_record = AverageMeter()
+        accuracy_record = AverageMeter()
         # Set the model in the training mode
         model.train()
 
@@ -52,6 +56,9 @@ def train(model, train_loader, labeled_eval_loader, args):
             # Compute the CE loss and update the loss AverageMeter with that value of loss
             loss = criterion1(output1, label)
             loss_record.update(loss.item(), x.size(0))
+            acc = accuracy(output1, label) # calculating the accuracy  
+            accuracy_record.update(acc[0].item(),x.size(0))
+
 
             # Zero the gradient of the optimizer, back-propagate the loss and perform an optimization step
             optimizer.zero_grad()
@@ -66,8 +73,12 @@ def train(model, train_loader, labeled_eval_loader, args):
 
         # Set the head argument to 'head1', this to ensure that we test the supervised head in the training step below
         print('test on labeled classes')
-        args.head = 'head1'
-        test(model, labeled_eval_loader, args)
+        acc_H1,nmi_H1,ari_H1,acc_testing_H1=test(model, labeled_eval_loader, args)
+        if logging_on:
+            wandb.log({"epoch": epoch,"Total_average_loss":loss_record.avg,
+                   "Head_1_training_accuracy":accuracy_record.avg,
+                   "cluster_acc_Head_1": acc_H1,"nmi_Head_1":nmi_H1,"ari_Head_1":ari_H1,"testing_acc_Head_1":acc_testing_H1,
+                   "lr":exp_lr_scheduler.get_last_lr()[0]}, step = epoch)
 # TO_UNDERSTAND: Since head1 is imposed before running the test step we are getting predictions performed by that head,
 # TO_UNDERSTAND: could it be that they are computing the clustering metrics
 # the question is why are we calculating accuracy of clusters in here??
@@ -84,6 +95,7 @@ def test(model, test_loader, args):
     # Instantiate two numpy arrays, one for predictions and oen for targets
     preds = np.array([])
     targets = np.array([])
+    acc_record = AverageMeter() # track the accuracy of the first head
 
     # Iterate for each batch in the dataloader
     for batch_idx, (x, label, _) in enumerate(tqdm(test_loader)):
@@ -107,7 +119,8 @@ def test(model, test_loader, args):
         # Here we are not interested in the value, so we put '_' for the first term. We are interested in the second
         # term, which is the index of that value, since the index is equal to the predicted class for that input sample.
         _, pred = output.max(1)
-
+        acc_testing = accuracy(output, label) # calculating the accuracy
+        acc_record.update(acc_testing[0].item(),x.size(0))
         # Convert tensor to numpy using 'label.cpu.numpy', then append the value in the respective numpy array
         targets = np.append(targets, label.cpu().numpy())
         preds = np.append(preds, pred.cpu().numpy())
@@ -154,8 +167,8 @@ def test(model, test_loader, args):
     # -----------------------------------------------------------------------------------------------------------------
 
     # Print the result of the testing procedure obtained computing the three metrics above
-    print('Test acc {:.4f}, nmi {:.4f}, ari {:.4f}'.format(acc, nmi, ari))
-    return preds 
+    print('Test cluster acc {:.4f}, nmi {:.4f}, ari {:.4f}, test accuracy {:.4f}'.format(acc, nmi, ari,acc_record.avg))
+    return acc, nmi,ari,acc_record.avg
 
 
 if __name__ == "__main__":
@@ -180,7 +193,22 @@ if __name__ == "__main__":
     parser.add_argument('--mode', type=str, default='train')  # Mode: train or test
     # Extract the args and make them available in the args object
     args = parser.parse_args()
-
+    logging_on= True
+    if logging_on:
+        wandb.login() #4619e908b2f2c21261030dae4c66556d4f1f3178
+        config = {
+        "learning_rate":args.lr,
+        "batch_size":args.batch_size,
+        "dataset":args.dataset_name,
+        "unlabled_classes":args.num_unlabeled_classes,
+        "labled_classes" :args.num_labeled_classes,
+        "momentum":args.momentum,
+        "weight_decay":args.weight_decay,
+        "epochs":args.epochs,
+        "step_size":args.step_size,
+        "mode":args.mode
+        }
+        wandb.init(project="trends_project", entity="mhaggag96", config = config, save_code = True)
     # Define if cuda can be used and initialize the device used by torch
     args.cuda = torch.cuda.is_available()
     device = torch.device("cuda" if args.cuda else "cpu")
@@ -193,28 +221,50 @@ if __name__ == "__main__":
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
     # Define the name of the path to save the trained model
+
     args.model_dir = model_dir+'/'+'{}.pth'.format(args.model_name)
+    '''
+    Changing the New_SSL_methods will turn you from the normal rot net to 
+    using other self supervised learning methods
+    '''
+    New_SSL_methods = True
+    if New_SSL_methods:
+        model = resnet_sim(args.num_labeled_classes, args.num_unlabeled_classes).to(device)
+        '''
+        I am using barlow twins pre loading. you can use different kind of weights
+        '''
+        ssl='Barlow_twins'
+        if ssl =='Barlow_twins':
+            state_dict = torch.load('trained_models/cifar10/barlow_twins/barlow-cifar10-otu5cw89-ep=999.ckpt', map_location="cpu")["state_dict"]
+            for l in list(state_dict.keys()):
+                if "classifier" in l or 'projector' in l :
+                    del state_dict[l]
+        for k in list(state_dict.keys()):
+                if "encoder" in k:
+                    state_dict[k.replace("encoder", "backbone")] = state_dict[k]
+                if "backbone" in k:
+                    state_dict['encoder.'+k.replace("backbone.", "")] = state_dict[k]      
+                del state_dict[k]
+        model.load_state_dict(state_dict, strict=False)
+    else:
+    #    Initialize ResNet architecture and also the BasicBlock, which are imported from resnet.py. Then send to cuda
+        model = ResNet(BasicBlock, [2, 2, 2, 2], args.num_labeled_classes, args.num_unlabeled_classes).to(device)
+        # Default inputs assume that we are working with 10 classes of which: 5 classes unlabeled 5 classes labeled.
+        # We have two heads in this ResNet model, head1 for the labeled and head2 for the unlabeled data.
+        # Load the weights for the ResNet model from the self-supervised previously trained model (selfsupervised_learning.py)
+        state_dict = torch.load(args.rotnet_dir)
+        # Delete the old linear head parameters. It was used just to perform semi-supervised learning (to predict rotation)
+        del state_dict['linear.weight']  # Size of the old head was [4,512]
+        del state_dict['linear.bias']  # Deleted not only weights but also the biases [4]
+        # After this operation we no longer have any weights or biases in the end. They are completely deleted, we are ready
+        # to learn the weights for the two new heads.
 
-    # Initialize ResNet architecture and also the BasicBlock, which are imported from resnet.py. Then send to cuda
-    model = ResNet(BasicBlock, [2, 2, 2, 2], args.num_labeled_classes, args.num_unlabeled_classes).to(device)
-    # Default inputs assume that we are working with 10 classes of which: 5 classes unlabeled 5 classes labeled.
-    # We have two heads in this ResNet model, head1 for the labeled and head2 for the unlabeled data.
-
+        # Apply the loaded weights to the model, we do not strictly enforce that the keys in state_dict match since the old
+        # model has one head that was removed, while the new model has two new heads. Therefore, hey cannot fully match
+        model.load_state_dict(state_dict, strict=False)
+      
     # Compute the total number of classes
     num_classes = args.num_labeled_classes + args.num_unlabeled_classes
-
-    # Load the weights for the ResNet model from the self-supervised previously trained model (selfsupervised_learning.py)
-    state_dict = torch.load(args.rotnet_dir)
-    # Delete the old linear head parameters. It was used just to perform semi-supervised learning (to predict rotation)
-    del state_dict['linear.weight']  # Size of the old head was [4,512]
-    del state_dict['linear.bias']  # Deleted not only weights but also the biases [4]
-    # After this operation we no longer have any weights or biases in the end. They are completely deleted, we are ready
-    # to learn the weights for the two new heads.
-
-    # Apply the loaded weights to the model, we do not strictly enforce that the keys in state_dict match since the old
-    # model has one head that was removed, while the new model has two new heads. Therefore, hey cannot fully match
-    model.load_state_dict(state_dict, strict=False)
-
     # Iterate through all the parameters of the new model
     for name, param in model.named_parameters():
         # If the parameter under analysis does not belong to 'head' (one of the two heads) or to 'layer4' (features
@@ -260,3 +310,5 @@ if __name__ == "__main__":
     print('test on labeled classes')
     args.head = 'head1'
     test(model, labeled_eval_loader, args)
+    if logging_on:
+        wandb.finish()

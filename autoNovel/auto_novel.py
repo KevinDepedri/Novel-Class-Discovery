@@ -189,8 +189,6 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
             # alpha = random.uniform(0, 1)
             # beta  = 1-alpha
             loss  = loss_ce + loss_bce + w * consistency_loss
-            # loss without consisitency loss
-            # loss = loss_ce + loss_bce 
             loss_record.update(loss.item(), x.size(0))
             loss_record_CEL.update(loss_ce.item(), x.size(0))
             loss_record_BCE.update(loss_bce.item(), x.size(0))
@@ -291,7 +289,6 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
             consistency_loss_c1 = F.mse_loss(prob1, prob1_bar)
             consistency_loss_c2 = F.mse_loss(prob2, prob2_bar)
             consistency_loss =  consistency_loss_c1 + consistency_loss_c2
-            # loss = loss_ce  + loss_ce_add + w * consistency_loss
             loss = loss_ce + loss_bce + loss_ce_add + w * consistency_loss
 
             loss_record.update(loss.item(), x.size(0))

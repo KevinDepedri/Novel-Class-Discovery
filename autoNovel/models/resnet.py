@@ -5,13 +5,27 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.autograd import Variable
-from torchvision import transforms
+from torchvision import transforms,models
 import pickle
 import os.path
 import datetime
 import numpy as np
 from torchsummary import summary
+class resnet_sim(nn.Module):
+    def __init__(self,num_labeled_classes=5, num_unlabeled_classes=5):
+        super(resnet_sim,self).__init__()
+        self.encoder = models.__dict__['resnet18']()#intializingresnet18 by pytorcch
+        self.encoder.fc = nn.Identity()# replace the fullneceted by an identity
+        self.encoder.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        self.encoder.maxpool = nn.Identity()# I am removign the max pool layer
+        self.head1 = nn.Linear(512, num_labeled_classes)  # First head: to classify known classes
+        self.head2 = nn.Linear(512, num_unlabeled_classes)  # Second head: to classify unknown classes
 
+    def forward(self, x):
+        out = self.encoder(x)
+        out1 = self.head1(out)
+        out2 = self.head2(out)
+        return out1,out2,out
 # Initialization of a ResNet architecture built to perform classification using two different heads, one head is used
 # to classify labeled sampled, while one is used to classify unlabeled samples.
 class ResNet(nn.Module):
@@ -126,11 +140,36 @@ if __name__ == '__main__':
     device = torch.device('cuda')
     num_labeled_classes = 10
     num_unlabeled_classes = 20
-    model = ResNet(BasicBlock, [2, 2, 2, 2], num_labeled_classes, num_unlabeled_classes)
-    model = model.to(device)
-    print(model)
-    print(summary(model, (3, 32, 32), batch_size=256))
-    y1, y2, y3 = model(Variable(torch.randn(256, 3, 32, 32).to(device)))
-    print(y1.size(), y2.size(), y3.size())
+    # model = ResNet(BasicBlock, [2, 2, 2, 2], num_labeled_classes, num_unlabeled_classes)
+    model= resnet_sim( num_labeled_classes, num_unlabeled_classes)
+    model = model
+    # for name, param in model.named_parameters():
+    #     if param.requires_grad:
+    #        print(name, param.data)
+    ssl='Barlow_twins'
+    if ssl =='Barlow_twins':
+            state_dict = torch.load('trained_models/cifar10/barlow_twins/barlow-cifar10-otu5cw89-ep=999.ckpt', map_location="cpu")["state_dict"]
+            for l in list(state_dict.keys()):
+                if "classifier" in l or 'projector' in l :
+                    del state_dict[l]
+    for k in list(state_dict.keys()):
+                if "encoder" in k:
+                    state_dict[k.replace("encoder", "backbone")] = state_dict[k]
+                if "backbone" in k:
+                    state_dict['encoder.'+k.replace("backbone.", "")] = state_dict[k]      
+                del state_dict[k]
+    # for k in list(state_dict.keys()):
+	#     print(k)
+    # print(state_dict)
+    model.load_state_dict(state_dict, strict=False)
+    # print(model.parameters())
+    # for param in model.parameters():
+    #   print(param.data)
     for name, param in model.named_parameters():
-        print(name)
+        print(name, param.data)
+    # print(model)
+    # print(summary(model, (3, 32, 32), batch_size=256))
+    # y1, y2, y3 = model(Variable(torch.randn(256, 3, 32, 32).to(device)))
+    # print(y1.size(), y2.size(), y3.size())
+    # for name, param in model.named_parameters():
+    #     print(name)
