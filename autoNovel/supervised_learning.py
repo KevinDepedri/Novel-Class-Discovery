@@ -193,7 +193,7 @@ if __name__ == "__main__":
     parser.add_argument('--mode', type=str, default='train')  # Mode: train or test
     # Extract the args and make them available in the args object
     args = parser.parse_args()
-    logging_on= True
+    logging_on = True
     if logging_on:
         wandb.login() #4619e908b2f2c21261030dae4c66556d4f1f3178
         config = {

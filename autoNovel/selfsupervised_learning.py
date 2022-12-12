@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim import lr_scheduler
-from torchvision import transforms
+from torchvision import transforms,models
 import pickle
 import os
 import os.path
@@ -16,6 +16,10 @@ from utils.util import AverageMeter, accuracy
 from models.resnet import BasicBlock
 from tqdm import tqdm
 import shutil
+#forlogging
+import wandb
+
+global logging_on 
 
 '''
 # Self supervised learning (as from section 2.1 of AutoNovel paper) - part 1
@@ -26,7 +30,19 @@ In the paper it is not mention how RotNet is built. In the majority of the case 
 GitHub of the RotNet paper: https://github.com/gidariss/FeatureLearningRotNet
 '''
 
+class resnet_sim(nn.Module):
+    def __init__(self,num_labeled_classes=5):
+        super(resnet_sim,self).__init__()
+        self.encoder = models.__dict__['resnet18']()#intializingresnet18 by pytorcch
+        self.encoder.fc = nn.Identity()# replace the fullneceted by an identity
+        self.encoder.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        self.encoder.maxpool = nn.Identity()# I am removign the max pool layer
+        self.head1 = nn.Linear(512, num_labeled_classes)  # First head: to classify known classes
 
+    def forward(self, x):
+        out = self.encoder(x)
+        out1 = self.head1(out)
+        return out1,out
 # Initialization of a ResNet architecture built to perform self-supervised learning as RotNet. It has only one output
 # heads with 4 possible output classes. The output classes are the 4 possible rotations (0, 90, 180, 270 degrees)
 class ResNet(nn.Module):
@@ -84,7 +100,7 @@ def train(epoch, model, device, dataloader, optimizer, exp_lr_scheduler, criteri
     # of the accuracy during the training procedure (see util.py)
     loss_record = AverageMeter()
     acc_record = AverageMeter()
-
+    print(logging_on)
     # Set the model in the training mode
     model.train()
     # Iterate through the dataloader using tqdm to print a graphic progress bar
@@ -114,14 +130,17 @@ def train(epoch, model, device, dataloader, optimizer, exp_lr_scheduler, criteri
         optimizer.step()
 
         # Perform a step on the input exp_lr_scheduler (scheduler used to define the learning rate)
-        exp_lr_scheduler.step()  # FIXME: Putting this here to avoid warning, if there are problems move it back above
-
+        
+    exp_lr_scheduler.step()  # FIXME: Putting this here to avoid warning, if there are problems move it back above
     # Print the result of the training procedure
     print('Train Epoch: {} Avg Loss: {:.4f} \t Avg Acc: {:.4f}'.format(epoch, loss_record.avg, acc_record.avg))
-
+    if logging_on:
+            wandb.log({"epoch": epoch,"Total_average_loss":loss_record.avg,
+                   "Head_1_training_accuracy":acc_record.avg,
+                   "lr":exp_lr_scheduler.get_last_lr()[0]}, step = epoch)
     return loss_record
 
-def test(model, device, dataloader, args):
+def test(model, device, dataloader, epoch,args):
     # Define an instance of AverageMeter to compute and store the average and current values of the accuracy
     acc_record = AverageMeter()
     # Put the model in evaluation mode
@@ -141,6 +160,9 @@ def test(model, device, dataloader, args):
 
     # Print the result of the testing procedure
     print('Test Acc: {:.4f}'.format(acc_record.avg))
+    if logging_on:
+            wandb.log({"epoch": epoch,
+                   "Head_1_val_accuracy":acc_record.avg}, step = epoch)
     return acc_record
 
 def main():
@@ -198,6 +220,16 @@ def main():
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
 
+    if logging_on:
+        wandb.login() #4619e908b2f2c21261030dae4c66556d4f1f3178
+        config = {
+        "learning_rate":args.lr,
+        "batch_size":args.batch_size,
+        "dataset":args.dataset_name,
+        "momentum":args.momentum,
+        "epochs":args.epochs,
+        }
+        wandb.init(project="trends_project", entity="mhaggag96", config = config, save_code = True)
     # Define the name of the path to save the trained model
     args.model_dir = model_dir+'/'+'{}.pth'.format(args.model_name)
     # FIXME: the saved model should be rotnet.pth but why when I open I see rotnet_cifar10 ??? See GitHub, probably
@@ -236,7 +268,11 @@ def main():
     # This NN will be used to predict the rotation of the examples coming from the dataloader, for this reason the
     # number of classes will be 4, for the four possible rotation (0, 90, 180, 270 degrees)
     # The ResNet architecture is the one described above, while the BasicBlock is imported from resnet.py
-    model = ResNet(BasicBlock, [2, 2, 2, 2], num_classes=4)
+    normal_model = True
+    if normal_model:
+        model = ResNet(BasicBlock, [2, 2, 2, 2], num_classes=4)
+    else:
+        model = resnet_sim(num_classes=4)
     # Send the model to the device
     model = model.to(device)
 
@@ -258,7 +294,7 @@ def main():
         # Compute the loss of the training step
         loss_record = train(epoch, model, device, dloader_train, optimizer, exp_lr_scheduler, criterion, args)
         # Compute the accuracy of the testing step
-        acc_record = test(model, device, dloader_test, args)
+        acc_record = test(model, device, dloader_test,epoch, args)
 
         # Compare the average accuracy saved in the AverageMeter object with the best accuracy measured up to now
         is_best = acc_record.avg > best_acc
@@ -267,8 +303,10 @@ def main():
         # If the average accuracy is the best accuracy achieved up to now, then save the model in the defined directory
         if is_best:
             torch.save(model.state_dict(), args.model_dir)
-
+    if logging_on:
+        wandb.finish()
 
 # If the name variable is equal to __main__ then run the main function and start the training and testing procedure.
 if __name__ == '__main__':
+    logging_on = True
     main()
