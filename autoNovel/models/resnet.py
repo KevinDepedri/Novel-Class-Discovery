@@ -141,8 +141,8 @@ if __name__ == '__main__':
     num_labeled_classes = 10
     num_unlabeled_classes = 20
     # model = ResNet(BasicBlock, [2, 2, 2, 2], num_labeled_classes, num_unlabeled_classes)
-    model= resnet_sim( num_labeled_classes, num_unlabeled_classes)
-    model = model
+    model= resnet_sim( num_labeled_classes, num_unlabeled_classes).cuda()
+    # model = model
     # for name, param in model.named_parameters():
     #     if param.requires_grad:
     #        print(name, param.data)

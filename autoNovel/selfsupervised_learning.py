@@ -42,7 +42,7 @@ class resnet_sim(nn.Module):
     def forward(self, x):
         out = self.encoder(x)
         out1 = self.head1(out)
-        return out1,out
+        return out1
 # Initialization of a ResNet architecture built to perform self-supervised learning as RotNet. It has only one output
 # heads with 4 possible output classes. The output classes are the 4 possible rotations (0, 90, 180, 270 degrees)
 class ResNet(nn.Module):
@@ -268,14 +268,14 @@ def main():
     # This NN will be used to predict the rotation of the examples coming from the dataloader, for this reason the
     # number of classes will be 4, for the four possible rotation (0, 90, 180, 270 degrees)
     # The ResNet architecture is the one described above, while the BasicBlock is imported from resnet.py
-    normal_model = True
+    normal_model = False
     if normal_model:
         model = ResNet(BasicBlock, [2, 2, 2, 2], num_classes=4)
     else:
-        model = resnet_sim(num_classes=4)
+        model = resnet_sim(num_labeled_classes=4)
     # Send the model to the device
     model = model.to(device)
-
+    print(model)
     # Instantiate SGD optimizer with input learning rate and momentum, and with pre-define weight_decay and Nesterov
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=5e-4, nesterov=True)
 

@@ -65,14 +65,15 @@ def train(model, train_loader, labeled_eval_loader, args):
             loss.backward()
             optimizer.step()
 
-            # Perform a step on the input exp_lr_scheduler (scheduler used to define the learning rate)
-            exp_lr_scheduler.step()  # FIXME: Put here to avoid warning, if there are problems move it back above
+        # Perform a step on the input exp_lr_scheduler (scheduler used to define the learning rate)
+        exp_lr_scheduler.step()  # FIXME: Put here to avoid warning, if there are problems move it back above
 
         # Print the result of the training procedure over that epoch
         print('Train Epoch: {} Avg Loss: {:.4f}'.format(epoch, loss_record.avg))
 
         # Set the head argument to 'head1', this to ensure that we test the supervised head in the training step below
         print('test on labeled classes')
+        args.head = 'head1'
         acc_H1,nmi_H1,ari_H1,acc_testing_H1=test(model, labeled_eval_loader, args)
         if logging_on:
             wandb.log({"epoch": epoch,"Total_average_loss":loss_record.avg,
@@ -227,7 +228,8 @@ if __name__ == "__main__":
     Changing the New_SSL_methods will turn you from the normal rot net to 
     using other self supervised learning methods
     '''
-    New_SSL_methods = True
+    New_SSL_methods = False
+    New_Resnet_config=True
     if New_SSL_methods:
         model = resnet_sim(args.num_labeled_classes, args.num_unlabeled_classes).to(device)
         '''
@@ -241,23 +243,30 @@ if __name__ == "__main__":
                     del state_dict[l]
         for k in list(state_dict.keys()):
                 if "encoder" in k:
-                    state_dict[k.replace("encoder", "backbone")] = state_dict[k]
+                        state_dict[k.replace("encoder", "backbone")] = state_dict[k]
                 if "backbone" in k:
-                    state_dict['encoder.'+k.replace("backbone.", "")] = state_dict[k]      
+                        state_dict['encoder.'+k.replace("backbone.", "")] = state_dict[k]      
                 del state_dict[k]
-        model.load_state_dict(state_dict, strict=False)
     else:
     #    Initialize ResNet architecture and also the BasicBlock, which are imported from resnet.py. Then send to cuda
-        model = ResNet(BasicBlock, [2, 2, 2, 2], args.num_labeled_classes, args.num_unlabeled_classes).to(device)
-        # Default inputs assume that we are working with 10 classes of which: 5 classes unlabeled 5 classes labeled.
-        # We have two heads in this ResNet model, head1 for the labeled and head2 for the unlabeled data.
-        # Load the weights for the ResNet model from the self-supervised previously trained model (selfsupervised_learning.py)
-        state_dict = torch.load(args.rotnet_dir)
-        # Delete the old linear head parameters. It was used just to perform semi-supervised learning (to predict rotation)
-        del state_dict['linear.weight']  # Size of the old head was [4,512]
-        del state_dict['linear.bias']  # Deleted not only weights but also the biases [4]
-        # After this operation we no longer have any weights or biases in the end. They are completely deleted, we are ready
-        # to learn the weights for the two new heads.
+        if New_Resnet_config:
+            # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py --rotnet_dir ./data/experiments/selfsupervised_learning/rotnet_cifar10_new_config.pth  --dataset_name cifar10 --model_name resnet_rotnet_cifar10_new_config
+            model = resnet_sim(args.num_labeled_classes, args.num_unlabeled_classes).to(device)
+            state_dict = torch.load(args.rotnet_dir)
+            del state_dict['head1.weight']  # Size of the old head was [4,512]
+            del state_dict['head1.bias']  # Deleted not only weights but also the biases [4]
+        else:
+            # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py --rotnet_dir ./data/experiments/selfsupervised_learning/rotnet_cifar10_basicconfig.pth --dataset_name cifar10 --model_name resnet_rotnet_cifar10_basicconfig
+            model = ResNet(BasicBlock, [2, 2, 2, 2], args.num_labeled_classes, args.num_unlabeled_classes).to(device)
+            # Default inputs assume that we are working with 10 classes of which: 5 classes unlabeled 5 classes labeled.
+            # We have two heads in this ResNet model, head1 for the labeled and head2 for the unlabeled data.
+            # Load the weights for the ResNet model from the self-supervised previously trained model (selfsupervised_learning.py)
+            state_dict = torch.load(args.rotnet_dir)
+            # Delete the old linear head parameters. It was used just to perform semi-supervised learning (to predict rotation)
+            del state_dict['linear.weight']  # Size of the old head was [4,512]
+            del state_dict['linear.bias']  # Deleted not only weights but also the biases [4]
+            # After this operation we no longer have any weights or biases in the end. They are completely deleted, we are ready
+            # to learn the weights for the two new heads.
 
         # Apply the loaded weights to the model, we do not strictly enforce that the keys in state_dict match since the old
         # model has one head that was removed, while the new model has two new heads. Therefore, hey cannot fully match
