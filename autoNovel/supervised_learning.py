@@ -234,49 +234,28 @@ if __name__ == "__main__":
 
     
     if New_SSL_methods:
-        # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py   --dataset_name cifar10 --model_name resnet_rotnet_cifar10_simsam
-
         model = resnet_sim(args.num_labeled_classes, args.num_unlabeled_classes).to(device)
         '''
         I am using barlow twins pre loading. you can use different kind of weights
         '''
-        ssl='simsiam'
+        ssl='Barlow_twins'
         print("We are working with this self learning method "+ssl)
         if ssl =='Barlow_twins':
+            # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py   --dataset_name cifar10 --model_name resnet_rotnet_cifar10_Barlow_twins_2
             state_dict = torch.load('trained_models/cifar10/barlow_twins/barlow-cifar10-otu5cw89-ep=999.ckpt', map_location="cpu")["state_dict"]
-            for l in list(state_dict.keys()):
-                if "classifier" in l or 'projector' in l :
-                    del state_dict[l]
         elif ssl == 'simsiam':
+            # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py   --dataset_name cifar10 --model_name resnet_rotnet_cifar10_simsam
             state_dict = torch.load('trained_models/cifar10/simsiam/simsiam-cifar10-252e1tvw-ep=999.ckpt', map_location="cpu")["state_dict"]
-            for l in list(state_dict.keys()):
-                if "classifier" in l or 'projector' in l :
-                    del state_dict[l]
         elif ssl == 'supcon':
             state_dict = torch.load('trained_models/cifar10/supcon/supcon-cifar10-1w8chdt4-ep=999.ckpt', map_location="cpu")["state_dict"]
-            for l in list(state_dict.keys()):
-                if "classifier" in l or 'projector' in l :
-                    del state_dict[l]
         elif ssl == 'swav':
             state_dict = torch.load('trained_models/cifar10/swav/swav-2rwotcpy-ep=999.ckpt', map_location="cpu")["state_dict"]
-            for l in list(state_dict.keys()):
-                if "classifier" in l or 'projector' in l :
-                    del state_dict[l]
         elif ssl == 'vibcreg':
             state_dict = torch.load('trained_models/cifar10/vibcreg/vibcreg-cifar10-3ehq2v3f-ep=999.ckpt', map_location="cpu")["state_dict"]
-            for l in list(state_dict.keys()):
-                if "classifier" in l or 'projector' in l :
-                    del state_dict[l]
         elif ssl == 'vicreg':
             state_dict = torch.load('trained_models/cifar10/vicreg/vicreg-cifar10-qx5zahvt-ep=999.ckpt', map_location="cpu")["state_dict"]
-            for l in list(state_dict.keys()):
-                if "classifier" in l or 'projector' in l :
-                    del state_dict[l]
         elif ssl == 'wmse':
             state_dict = torch.load('trained_models/cifar10/wmse/wmse-cifar10-6z3m2p9o-ep=999.ckpt', map_location="cpu")["state_dict"]
-            for l in list(state_dict.keys()):
-                if "classifier" in l or 'projector' in l :
-                    del state_dict[l]
         for k in list(state_dict.keys()):
                 if "encoder" in k:
                         state_dict[k.replace("encoder", "backbone")] = state_dict[k]
@@ -303,10 +282,9 @@ if __name__ == "__main__":
             del state_dict['linear.bias']  # Deleted not only weights but also the biases [4]
             # After this operation we no longer have any weights or biases in the end. They are completely deleted, we are ready
             # to learn the weights for the two new heads.
-
         # Apply the loaded weights to the model, we do not strictly enforce that the keys in state_dict match since the old
         # model has one head that was removed, while the new model has two new heads. Therefore, hey cannot fully match
-        model.load_state_dict(state_dict, strict=False)
+    model.load_state_dict(state_dict, strict=False)
       
     # # Compute the total number of classes
     # # Iterate through all the parameters of the new model
@@ -350,7 +328,6 @@ if __name__ == "__main__":
         print("model loaded from {}.".format(args.model_dir))
         # Perform the testing over the loaded model
         model.load_state_dict(torch.load(args.model_dir))
-
     # In the end, test the model using head1 over the labeled dataloader
     print('test on labeled classes')
     args.head = 'head1'
