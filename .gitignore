@@ -2,3 +2,5 @@ autoNovel/data/datasets
 autoNovel/data/experiments
 
 autoNovel/wandb
+
+autoNovel/trained_models
