@@ -239,6 +239,8 @@ def CIFAR10Data(root, split='train', aug=None, target_list=range(5)):
         transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+            # transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)),
+
         ])
 
     # If we have one augmentation then random crop and horizontal flip the image, then move to tensor and normalize
@@ -250,6 +252,13 @@ def CIFAR10Data(root, split='train', aug=None, target_list=range(5)):
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),  # Normalize using mean and std
             # TODO: where this STD comes from? the std one are not the same to the computed ones as in RotationLoader
         ])
+        # transform = transforms.Compose([
+        #     transforms.RandomResizedCrop(32, scale=(0.08, 1.0)),  # Random cropping while padding
+        #     transforms.RandomHorizontalFlip(),  # Perform a random horizontal flip
+        #     transforms.ToTensor(),  # Turn the image to tensor
+        #     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)),
+        #     # TODO: where this STD comes from? the std one are not the same to the computed ones as in RotationLoader
+        # ])
         # values from mean [0.4913725490196078, 0.4823529411764706, 0.4466666666666667] are the same
         # values from std [0.24705882352941178, 0.24352941176470588, 0.2615686274509804] but the std is different
 

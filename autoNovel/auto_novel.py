@@ -7,7 +7,7 @@ from sklearn.metrics import adjusted_rand_score as ari_score
 from sklearn.cluster import KMeans
 from utils.util import BCE, PairEnum, cluster_acc, Identity, AverageMeter, seed_torch,accuracy
 from utils import ramps
-from models.resnet import ResNet, BasicBlock
+from models.resnet import ResNet, BasicBlock,resnet_sim
 from data.cifarloader import CIFAR10Loader, CIFAR10LoaderMix, CIFAR100Loader, CIFAR100LoaderMix
 from data.svhnloader import SVHNLoader, SVHNLoaderMix
 from tqdm import tqdm
@@ -413,9 +413,14 @@ if __name__ == "__main__":
         os.makedirs(model_dir)
     # Define the name of the path to save the trained model
     args.model_dir = model_dir + '/' + '{}.pth'.format(args.model_name)
-
-    # Initialize ResNet architecture and also the BasicBlock, which are imported from resnet.py. Then send to cuda
-    model = ResNet(BasicBlock, [2, 2, 2, 2], args.num_labeled_classes, args.num_unlabeled_classes).to(device)
+    New_resnet = True
+    if New_resnet:
+        # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_new_config.pth resnet_IL_cifar10_new_config
+        model = resnet_sim(args.num_labeled_classes, args.num_unlabeled_classes).to(device)
+    else:
+        # Initialize ResNet architecture and also the BasicBlock, which are imported from resnet.py. Then send to cuda
+        # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_basicconfig.pth resnet_IL_cifar10_basic_config
+        model = ResNet(BasicBlock, [2, 2, 2, 2], args.num_labeled_classes, args.num_unlabeled_classes).to(device)
     # Default inputs assume that we are working with 10 classes of which: 5 classes unlabeled 5 classes labeled.
     # We have two heads in this ResNet model, head1 for the labeled and head2 for the unlabeled data.
 
