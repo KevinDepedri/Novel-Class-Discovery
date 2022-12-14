@@ -268,8 +268,9 @@ def CIFAR10Data(root, split='train', aug=None, target_list=range(5)):
             RandomTranslateWithReflect(4),  # Random translate and reflect
             transforms.RandomHorizontalFlip(),  # Perform a random horizontal flip
             transforms.ToTensor(),  # Turn the image to tensor
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),  # Normalize using mean and std
-        ]))
+            # transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),  # Normalize using mean and std
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.247, 0.243, 0.261)),
+
     dataset = CIFAR10(root=root, split=split, transform=transform, target_list=target_list)
     return dataset
 
