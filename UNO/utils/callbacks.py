@@ -6,6 +6,7 @@ import os
 
 class PretrainCheckpointCallback(Callback):
     def on_save_checkpoint(self, trainer, pl_module):
+        # Define the name of the check-point
         checkpoint_filename = (
             "-".join(
                 [
@@ -17,5 +18,7 @@ class PretrainCheckpointCallback(Callback):
             )
             + ".cp"
         )
+        # Join the name with the path of the specified folder to save the model
         checkpoint_path = os.path.join(pl_module.hparams.checkpoint_dir, checkpoint_filename)
+        # Save the model on that path
         torch.save(pl_module.model.state_dict(), checkpoint_path)
