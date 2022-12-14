@@ -16,7 +16,7 @@ from datetime import datetime
 # Initialize the basic argument parser and take input arguments
 parser = ArgumentParser()
 parser.add_argument("--dataset", default="CIFAR100", type=str, help="dataset")
-parser.add_argument("--download", default=False, action="store_true", help="wether to download")
+parser.add_argument("--download", default=True, action="store_true", help="wether to download")
 parser.add_argument("--data_dir", default="datasets", type=str, help="data directory")
 parser.add_argument("--log_dir", default="logs", type=str, help="log directory")
 parser.add_argument("--checkpoint_dir", default="checkpoints", type=str, help="checkpoint dir")

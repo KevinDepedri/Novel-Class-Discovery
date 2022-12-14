@@ -419,6 +419,9 @@ if __name__ == "__main__":
     if New_resnet:
         # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_new_config.pth resnet_IL_cifar10_new_config
         model = resnet_sim(args.num_labeled_classes, args.num_unlabeled_classes).to(device)
+        # another run
+        # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_simsam_2.pth resnet_IL_cifar10_simsam_2
+
     else:
         # Initialize ResNet architecture and also the BasicBlock, which are imported from resnet.py. Then send to cuda
         # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_basicconfig.pth resnet_IL_cifar10_basic_config
@@ -481,7 +484,7 @@ if __name__ == "__main__":
                                              aug='once', shuffle=True, target_list=range(args.num_labeled_classes))
 
         # Unlabeled loader only, used for the evaluation over unlabeled samples
-        
+
         unlabeled_eval_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='train',
                                               aug=None, shuffle=False,
                                               target_list=range(args.num_labeled_classes, num_classes))

@@ -238,7 +238,7 @@ if __name__ == "__main__":
         '''
         I am using barlow twins pre loading. you can use different kind of weights
         '''
-        ssl='Barlow_twins'
+        ssl='supcon'
         print("We are working with this self learning method "+ssl)
         if ssl =='Barlow_twins':
             # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py   --dataset_name cifar10 --model_name resnet_rotnet_cifar10_Barlow_twins_2
@@ -247,6 +247,7 @@ if __name__ == "__main__":
             # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py   --dataset_name cifar10 --model_name resnet_rotnet_cifar10_simsam
             state_dict = torch.load('trained_models/cifar10/simsiam/simsiam-cifar10-252e1tvw-ep=999.ckpt', map_location="cpu")["state_dict"]
         elif ssl == 'supcon':
+            # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py   --dataset_name cifar10 --model_name resnet_rotnet_cifar10_supcon
             state_dict = torch.load('trained_models/cifar10/supcon/supcon-cifar10-1w8chdt4-ep=999.ckpt', map_location="cpu")["state_dict"]
         elif ssl == 'swav':
             state_dict = torch.load('trained_models/cifar10/swav/swav-2rwotcpy-ep=999.ckpt', map_location="cpu")["state_dict"]

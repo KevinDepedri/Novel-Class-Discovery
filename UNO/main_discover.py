@@ -19,7 +19,7 @@ from datetime import datetime
 parser = ArgumentParser()
 parser.add_argument("--dataset", default="CIFAR100", type=str, help="dataset")
 parser.add_argument("--imagenet_split", default="A", type=str, help="imagenet split [A,B,C]")
-parser.add_argument("--download", default=False, action="store_true", help="wether to download")
+parser.add_argument("--download", default=True, action="store_true", help="wether to download")
 parser.add_argument("--data_dir", default="datasets", type=str, help="data directory")
 parser.add_argument("--log_dir", default="logs", type=str, help="log directory")
 parser.add_argument("--batch_size", default=256, type=int, help="batch size")
