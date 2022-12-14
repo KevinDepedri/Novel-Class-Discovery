@@ -16,6 +16,7 @@ import os
 # wandb importing
 import wandb
 import random
+
 # global current_epoch
 # Auto-novel training without incremental learning (IL)
 global logging_on
@@ -414,6 +415,7 @@ if __name__ == "__main__":
     # Define the name of the path to save the trained model
     args.model_dir = model_dir + '/' + '{}.pth'.format(args.model_name)
     New_resnet = True
+    # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_Barlow_twins_2.pth resnet_IL_cifar10_Barlow_twins_2
     if New_resnet:
         # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_new_config.pth resnet_IL_cifar10_new_config
         model = resnet_sim(args.num_labeled_classes, args.num_unlabeled_classes).to(device)
