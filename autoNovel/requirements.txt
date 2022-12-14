@@ -1,0 +1,12 @@
+matplotlib==3.2.2
+numpy==1.22.3
+Pillow==9.3.0
+scikit_learn==1.2.0
+scipy==1.8.0
+seaborn==0.11.2
+six==1.16.0
+torch==1.11.0+cu113
+torchnet==0.0.4
+torchsummary==1.5.1
+torchvision==0.12.0+cu113
+tqdm==4.64.0
