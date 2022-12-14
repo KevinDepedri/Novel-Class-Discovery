@@ -13,6 +13,7 @@ from argparse import ArgumentParser
 from datetime import datetime
 
 
+# Initialize the basic argument parser and take input arguments
 parser = ArgumentParser()
 parser.add_argument("--dataset", default="CIFAR100", type=str, help="dataset")
 parser.add_argument("--download", default=False, action="store_true", help="wether to download")
@@ -38,27 +39,35 @@ parser.add_argument("--pretrained", type=str, default=None, help="pretrained che
 
 
 class Pretrainer(pl.LightningModule):
+    """Built the correct model depending on the input arguments"""
     def __init__(self, **kwargs):
+        """Initialize the model"""
+        # Call the initializer of the parent class
         super().__init__()
+        # Store all the provided arguments under the self.hparams attribute of the current class
         self.save_hyperparameters({k: v for (k, v) in kwargs.items() if not callable(v)})
 
-        # build model
+        # Build a MultiHeadResNet (only with the h head for labeled classes)
         self.model = MultiHeadResNet(
             arch=self.hparams.arch,
+            # True if the string CIFAR is present in self.hparams.dataset (Normally true since dataset=CIFAR100)
             low_res="CIFAR" in self.hparams.dataset,
             num_labeled=self.hparams.num_labeled_classes,
             num_unlabeled=self.hparams.num_unlabeled_classes,
+            # Number of heads not specified, only the supervised prototype head will be created
             num_heads=None,
         )
 
+        # If a pretrained checkpoint path has been specified then load its data
         if self.hparams.pretrained is not None:
             state_dict = torch.load(self.hparams.pretrained)
             self.model.load_state_dict(state_dict, strict=False)
 
-        # metrics
-        self.accuracy = Accuracy()
+        # Add a final accuracy meter to the model
+        self.accuracy = Accuracy('multiclass', num_classes=self.hparams.num_labeled_classes)
 
     def configure_optimizers(self):
+        """Configure SGD optimizer and LR scheduler"""
         optimizer = torch.optim.SGD(
             self.model.parameters(),
             lr=self.hparams.base_lr,
@@ -75,55 +84,64 @@ class Pretrainer(pl.LightningModule):
         return [optimizer], [scheduler]
 
     def training_step(self, batch, batch_idx):
+        """Train the model"""
+        # Extract images and labels from the batch
         images, labels = batch
 
-        # normalize prototypes
+        # Normalize the prototypes (it works on all the heads but here we have only the supervised one)
         self.model.normalize_prototypes()
 
-        # forward
+        # Compute the output of the model (call to ....)
         outputs = self.model(images)
 
-        # supervised loss
+        # Compute the supervised CE loss for each output of the labeled head
         loss_supervised = torch.stack(
             [F.cross_entropy(o / self.hparams.temperature, labels) for o in outputs["logits_lab"]]
         ).mean()
 
-        # log
+        # Save the loss and the learning-rate, then log them
         results = {
             "loss_supervised": loss_supervised,
             "lr": self.trainer.optimizers[0].param_groups[0]["lr"],
         }
         self.log_dict(results, on_step=False, on_epoch=True, sync_dist=True)
 
-        # reweight loss
+        # Return the supervised loss
         return loss_supervised
 
     def validation_step(self, batch, batch_idx):
+        """Validate the model"""
+        # Extract images and labels from the batch
         images, labels = batch
 
-        # forward
+        # Get the output of the model only from the labeled head (call to ....)
         logits = self.model(images)["logits_lab"]
+        # Extract the prediction for the dimension -1 from the supervised logits
         _, preds = logits.max(dim=-1)
 
-        # calculate loss and accuracy
+        # Compute supervised CE loss and accuracy
         loss_supervised = F.cross_entropy(logits, labels)
         acc = self.accuracy(preds, labels)
 
-        # log
+        # Save the validation loss and the validation accuracy, then log them
         results = {
             "val/loss_supervised": loss_supervised,
             "val/acc": acc,
         }
         self.log_dict(results, on_step=False, on_epoch=True)
+
+        # Return the logged values as result for this iteration
         return results
 
 
 def main(args):
-    # build datamodule
+    # Instantiate a datamodule in 'pre-train' mode over the dataset specified by args (default = CIFAR100), this module
+    # encompasses all the information about dataset, transforms, ...
     dm = get_datamodule(args, "pretrain")
 
-    # logger
+    # Define the name of the current run
     run_name = "-".join(["pretrain", args.arch, args.dataset, args.comment])
+    # Define an instance of Pytorch-Lightning WandB logger using the arguments of the parser and the name of the run
     wandb_logger = pl.loggers.WandbLogger(
         save_dir=args.log_dir,
         name=run_name,
@@ -132,15 +150,23 @@ def main(args):
         offline=args.offline,
     )
 
+    # Instantiate a model giving in input all the available arguments as a dictionary to the PreTrainer class
     model = Pretrainer(**args.__dict__)
-    trainer = pl.Trainer.from_argparse_args(
-        args, logger=wandb_logger, callbacks=[PretrainCheckpointCallback()]
-    )
+
+    # Define a Pytorch-Lightning Trainer using the parameter from the Pytorch-Lightning parser. Furthermore, it will
+    # send its results to the specified logger, and it will use the callback to save the model weights in the right way
+    trainer = pl.Trainer.from_argparse_args(args, logger=wandb_logger, callbacks=[PretrainCheckpointCallback()])
+    # Fit the model over the data-module
     trainer.fit(model, dm)
 
 
+# Run the code
 if __name__ == "__main__":
+    # Extend the basic ArgParser with a PyTorch-Lightning parser, this will introduce all the NN-training terms
     parser = pl.Trainer.add_argparse_args(parser)
+
+    # Parse the arguments and make them ready for the retrieval
     args = parser.parse_args()
 
+    # Run the main giving all the arguments (basic + training)
     main(args)
