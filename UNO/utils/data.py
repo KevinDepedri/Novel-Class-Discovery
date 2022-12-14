@@ -10,6 +10,7 @@ import os
 
 
 def get_datamodule(args, mode):
+    """Get the correct DataModule"""
     if mode == "pretrain":
         if args.dataset == "ImageNet":
             return PretrainImageNetDataModule(args)
@@ -23,42 +24,47 @@ def get_datamodule(args, mode):
 
 
 class PretrainCIFARDataModule(pl.LightningDataModule):
+    """Define a DataModule to pre-train the model on CIFAR dataset"""
     def __init__(self, args):
         super().__init__()
+        # Assign all the parameters taken in input by the argument parser
         self.data_dir = args.data_dir
         self.download = args.download
         self.batch_size = args.batch_size
         self.num_workers = args.num_workers
         self.num_labeled_classes = args.num_labeled_classes
         self.num_unlabeled_classes = args.num_unlabeled_classes
+        # Assign to dataset_class an instance of torchvision.datasets.CIFAR100 (in the case of pretrain phase)
         self.dataset_class = getattr(torchvision.datasets, args.dataset)
+        # Built transformation for train and evaluation set
         self.transform_train = get_transforms("unsupervised", args.dataset)
         self.transform_val = get_transforms("eval", args.dataset)
 
     def prepare_data(self):
+        """Prepare train and test data from the specified dataset"""
         self.dataset_class(self.data_dir, train=True, download=self.download)
         self.dataset_class(self.data_dir, train=False, download=self.download)
 
     def setup(self, stage=None):
+        """Build train and test dataset that will be used in the dataloader"""
+        # Define a list with the 'class number' of the samples that will be considered as labeled
         labeled_classes = range(self.num_labeled_classes)
 
-        # train dataset
-        self.train_dataset = self.dataset_class(
-            self.data_dir, train=True, transform=self.transform_train
-        )
-        train_indices_lab = np.where(
-            np.isin(np.array(self.train_dataset.targets), labeled_classes)
-        )[0]
+        # Instantiate train dataset
+        # First get train split from the specified directory and apply the train transform
+        self.train_dataset = self.dataset_class(self.data_dir, train=True, transform=self.transform_train)
+        # Get the indices for input samples of the train_dataset that have as target on of the specified 'class number'
+        train_indices_lab = np.where(np.isin(np.array(self.train_dataset.targets), labeled_classes))[0]
+        # Define train dataset as the subset of samples of the full train_dataset, using the computed indices
         self.train_dataset = torch.utils.data.Subset(self.train_dataset, train_indices_lab)
 
-        # val datasets
-        self.val_dataset = self.dataset_class(
-            self.data_dir, train=False, transform=self.transform_val
-        )
+        # Instantiate val datasets (as above)
+        self.val_dataset = self.dataset_class(self.data_dir, train=False, transform=self.transform_val)
         val_indices_lab = np.where(np.isin(np.array(self.val_dataset.targets), labeled_classes))[0]
         self.val_dataset = torch.utils.data.Subset(self.val_dataset, val_indices_lab)
 
     def train_dataloader(self):
+        """Build train dataloader using the train dataset"""
         return torch.utils.data.DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
@@ -69,6 +75,7 @@ class PretrainCIFARDataModule(pl.LightningDataModule):
         )
 
     def val_dataloader(self):
+        """Build test dataloader using the test dataset"""
         return torch.utils.data.DataLoader(
             self.val_dataset,
             batch_size=self.batch_size,
@@ -80,6 +87,7 @@ class PretrainCIFARDataModule(pl.LightningDataModule):
 
 
 class DiscoverCIFARDataModule(pl.LightningDataModule):
+    """Define a DataModule for the discovery phase of the model on CIFAR dataset"""
     def __init__(self, args):
         super().__init__()
         self.data_dir = args.data_dir
@@ -99,43 +107,36 @@ class DiscoverCIFARDataModule(pl.LightningDataModule):
         self.transform_val = get_transforms("eval", args.dataset)
 
     def prepare_data(self):
+        """Prepare train and test data from the specified dataset"""
         self.dataset_class(self.data_dir, train=True, download=self.download)
         self.dataset_class(self.data_dir, train=False, download=self.download)
 
     def setup(self, stage=None):
+        """Build train and test dataset that will be used in the dataloader"""
+        # Define a list with the 'class number' of the samples that will be considered as labeled, and unlabeled
         labeled_classes = range(self.num_labeled_classes)
-        unlabeled_classes = range(
-            self.num_labeled_classes, self.num_labeled_classes + self.num_unlabeled_classes
-        )
+        unlabeled_classes = range(self.num_labeled_classes, self.num_labeled_classes + self.num_unlabeled_classes)
 
-        # train dataset
-        self.train_dataset = self.dataset_class(
-            self.data_dir, train=True, transform=self.transform_train
-        )
+        # Instantiate train dataset from the specified directory and apply the train transform
+        self.train_dataset = self.dataset_class(self.data_dir, train=True, transform=self.transform_train)
 
-        # val datasets
-        val_dataset_train = self.dataset_class(
-            self.data_dir, train=True, transform=self.transform_val
-        )
-        val_dataset_test = self.dataset_class(
-            self.data_dir, train=False, transform=self.transform_val
-        )
-        # unlabeled classes, train set
-        val_indices_unlab_train = np.where(
-            np.isin(np.array(val_dataset_train.targets), unlabeled_classes)
-        )[0]
+        # Instantiate train and test split for the validation dataset
+        val_dataset_train = self.dataset_class(self.data_dir, train=True, transform=self.transform_val)
+        val_dataset_test = self.dataset_class(self.data_dir, train=False, transform=self.transform_val)
+
+        # Get indices and use them to get the subset of samples for the unlabeled train validation phase
+        val_indices_unlab_train = np.where(np.isin(np.array(val_dataset_train.targets), unlabeled_classes))[0]
         val_subset_unlab_train = torch.utils.data.Subset(val_dataset_train, val_indices_unlab_train)
-        # unlabeled classes, test set
-        val_indices_unlab_test = np.where(
-            np.isin(np.array(val_dataset_test.targets), unlabeled_classes)
-        )[0]
+
+        # Get indices and use them to get the subset of samples for the unlabeled test validation phase
+        val_indices_unlab_test = np.where(np.isin(np.array(val_dataset_test.targets), unlabeled_classes))[0]
         val_subset_unlab_test = torch.utils.data.Subset(val_dataset_test, val_indices_unlab_test)
-        # labeled classes, test set
-        val_indices_lab_test = np.where(
-            np.isin(np.array(val_dataset_test.targets), labeled_classes)
-        )[0]
+
+        # Get indices and use them to get the subset of samples for the labeled test validation phase
+        val_indices_lab_test = np.where(np.isin(np.array(val_dataset_test.targets), labeled_classes))[0]
         val_subset_lab_test = torch.utils.data.Subset(val_dataset_test, val_indices_lab_test)
 
+        # Concatenate the three previous subset and build the validation dataset
         self.val_datasets = [val_subset_unlab_train, val_subset_unlab_test, val_subset_lab_test]
 
     @property
@@ -143,6 +144,7 @@ class DiscoverCIFARDataModule(pl.LightningDataModule):
         return {0: "unlab/train", 1: "unlab/test", 2: "lab/test"}
 
     def train_dataloader(self):
+        """Build train dataloader using the train dataset"""
         return torch.utils.data.DataLoader(
             self.train_dataset,
             batch_size=self.batch_size,
@@ -153,6 +155,7 @@ class DiscoverCIFARDataModule(pl.LightningDataModule):
         )
 
     def val_dataloader(self):
+        """Build test dataloaders using the test dataset for each dataset in the val_dataset"""
         return [
             torch.utils.data.DataLoader(
                 dataset,
