@@ -481,6 +481,7 @@ if __name__ == "__main__":
                                              aug='once', shuffle=True, target_list=range(args.num_labeled_classes))
 
         # Unlabeled loader only, used for the evaluation over unlabeled samples
+        
         unlabeled_eval_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='train',
                                               aug=None, shuffle=False,
                                               target_list=range(args.num_labeled_classes, num_classes))
