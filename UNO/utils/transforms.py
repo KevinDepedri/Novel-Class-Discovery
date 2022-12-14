@@ -86,12 +86,14 @@ class MultiTransform:
 
 def get_transforms(mode, dataset, multicrop=False, num_large_crops=2, num_small_crops=2):
 
+    # Get the correct values for the normalization
     mean, std = {
         "CIFAR10": [(0.491, 0.482, 0.447), (0.202, 0.199, 0.201)],
         "CIFAR100": [(0.507, 0.487, 0.441), (0.267, 0.256, 0.276)],
         "ImageNet": [(0.485, 0.456, 0.406), (0.229, 0.224, 0.225)],
     }[dataset]
 
+    # Build the transform
     transform = {
         "ImageNet": {
             "unsupervised": T.Compose(
@@ -117,6 +119,7 @@ def get_transforms(mode, dataset, multicrop=False, num_large_crops=2, num_small_
         "CIFAR100": {
             "unsupervised": T.Compose(
                 [
+                    # Take one random transform in the following list (RandomCrop or RandomResizedCrop)
                     T.RandomChoice(
                         [
                             T.RandomCrop(32, padding=4),
