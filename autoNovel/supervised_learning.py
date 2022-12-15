@@ -238,7 +238,7 @@ if __name__ == "__main__":
         '''
         I am using barlow twins pre loading. you can use different kind of weights
         '''
-        ssl='supcon'
+        ssl='swav'
         print("We are working with this self learning method "+ssl)
         if ssl =='Barlow_twins':
             # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py   --dataset_name cifar10 --model_name resnet_rotnet_cifar10_Barlow_twins_2
@@ -250,12 +250,16 @@ if __name__ == "__main__":
             # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py   --dataset_name cifar10 --model_name resnet_rotnet_cifar10_supcon
             state_dict = torch.load('trained_models/cifar10/supcon/supcon-cifar10-1w8chdt4-ep=999.ckpt', map_location="cpu")["state_dict"]
         elif ssl == 'swav':
+            # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py   --dataset_name cifar10 --model_name resnet_rotnet_cifar10_swav
             state_dict = torch.load('trained_models/cifar10/swav/swav-2rwotcpy-ep=999.ckpt', map_location="cpu")["state_dict"]
         elif ssl == 'vibcreg':
+            # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py   --dataset_name cifar10 --model_name resnet_rotnet_cifar10_vibcreg
             state_dict = torch.load('trained_models/cifar10/vibcreg/vibcreg-cifar10-3ehq2v3f-ep=999.ckpt', map_location="cpu")["state_dict"]
         elif ssl == 'vicreg':
+            # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py   --dataset_name cifar10 --model_name resnet_rotnet_cifar10_vicreg
             state_dict = torch.load('trained_models/cifar10/vicreg/vicreg-cifar10-qx5zahvt-ep=999.ckpt', map_location="cpu")["state_dict"]
         elif ssl == 'wmse':
+            # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py   --dataset_name cifar10 --model_name resnet_rotnet_cifar10_wmse
             state_dict = torch.load('trained_models/cifar10/wmse/wmse-cifar10-6z3m2p9o-ep=999.ckpt', map_location="cpu")["state_dict"]
         for k in list(state_dict.keys()):
                 if "encoder" in k:
