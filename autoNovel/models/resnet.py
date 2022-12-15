@@ -13,11 +13,11 @@ import numpy as np
 from torchsummary import summary
 class resnet_sim(nn.Module):
     def __init__(self,num_labeled_classes=5, num_unlabeled_classes=5):
-        super(resnet_sim,self).__init__()
-        self.encoder = models.__dict__['resnet18']()#intializingresnet18 by pytorcch
-        self.encoder.fc = nn.Identity()# replace the fullneceted by an identity
+        super(resnet_sim, self).__init__()
+        self.encoder = models.__dict__['resnet18']()  # Initializing ResNet18 by pytorch
+        self.encoder.fc = nn.Identity()  # Replace the fully connected layer with an identity
         self.encoder.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
-        self.encoder.maxpool = nn.Identity()# I am removign the max pool layer
+        self.encoder.maxpool = nn.Identity()  # Remove the max pool layer
         self.head1 = nn.Linear(512, num_labeled_classes)  # First head: to classify known classes
         self.head2 = nn.Linear(512, num_unlabeled_classes)  # Second head: to classify unknown classes
 
