@@ -5,9 +5,9 @@ from torch.optim import SGD, lr_scheduler
 from sklearn.metrics.cluster import normalized_mutual_info_score as nmi_score
 from sklearn.metrics import adjusted_rand_score as ari_score
 from sklearn.cluster import KMeans
-from utils.util import BCE, PairEnum, cluster_acc, Identity, AverageMeter, seed_torch,accuracy
+from utils.util import BCE, PairEnum, cluster_acc, Identity, AverageMeter, seed_torch, accuracy
 from utils import ramps
-from models.resnet import ResNet, BasicBlock,resnet_sim
+from models.resnet import ResNet, BasicBlock, resnet_sim
 from data.cifarloader import CIFAR10Loader, CIFAR10LoaderMix, CIFAR100Loader, CIFAR100LoaderMix
 from data.svhnloader import SVHNLoader, SVHNLoaderMix
 from tqdm import tqdm
@@ -20,6 +20,8 @@ import random
 # global current_epoch
 # Auto-novel training without incremental learning (IL)
 global logging_on
+
+
 def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args):
     # Instantiate SGD optimizer with input learning rate, momentum and weight_decay
     optimizer = SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
@@ -40,12 +42,12 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
         # Define an instance of AverageMeter to compute and store the average and current values of the loss
         # current_epoch = epoch# setting the global variable to the current epoch 
         loss_record = AverageMeter()
-        loss_record_CEL = AverageMeter()   # average metter to follow the cross entropy loss
-        loss_record_BCE = AverageMeter()   # average meter to follow the binary cross entropy loss
-        loss_record_CON_1 = AverageMeter() # average meter to follow the first paramter of consistency loss
-        loss_record_CON_2 = AverageMeter() # average meter to follow the second paramter of consistency loss
-        loss_record_CON_total = AverageMeter() # average meter to follow the total of consistency loss
-        acc_record = AverageMeter() # track the accuracy of the first head
+        loss_record_CEL = AverageMeter()  # average meter to follow the cross entropy loss
+        loss_record_BCE = AverageMeter()  # average meter to follow the binary cross entropy loss
+        loss_record_CON_1 = AverageMeter()  # average meter to follow the first parameter of consistency loss
+        loss_record_CON_2 = AverageMeter()  # average meter to follow the second parameter of consistency loss
+        loss_record_CON_total = AverageMeter()  # average meter to follow the total of consistency loss
+        acc_record = AverageMeter()  # track the accuracy of the first head
 
         # Set the model in the training mode
         model.train()
@@ -67,7 +69,8 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
             output1_bar, output2_bar, _ = model(x_bar)  # getting output of 2 heads
 
             # Apply softmax on all the computed outputs to turn everything into probabilities
-            prob1, prob1_bar, prob2, prob2_bar = F.softmax(output1, dim=1), F.softmax(output1_bar, dim=1), F.softmax(output2, dim=1), F.softmax(output2_bar, dim=1)
+            prob1, prob1_bar, prob2, prob2_bar = F.softmax(output1, dim=1), F.softmax(output1_bar, dim=1), \
+                                                 F.softmax(output2, dim=1), F.softmax(output2_bar, dim=1)
 
             # Compute a tensor mask of true and false with the size of the batch size. Here, for each example in the
             # batch_size we will have a 'true' value when its label has a value lower than the num_labeled_classes (5),
@@ -107,27 +110,27 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
 
             # Generate two matrices
             rank_idx1, rank_idx2 = PairEnum(rank_idx)  # mask is set to none
-            # rank_idx1 (4624,512) repeated variable. imagine that you have 68 pictures features and we repeats them 68 times
-            # so all the whole variable is copied and put 64 times.
+            # rank_idx1 (4624,512) repeated variable. imagine that you have 68 pictures features, and we repeat them
+            # 68 times so all the whole variable is copied and put 64 times.
             # rank_idx2. each feature vector size 512 i repeat it 68 times so i have (68,34816)=(68,68*512). then
             # i reshape it to (-1,512) so that the final vector becomes  size of [4624, 512]
-            # if you donot understand the things above ignore it and look at example to see the kind of outptu returned in here.
-            # Example if you have the following tensor x
+            # if you don't understand the things above ignore it and look at example to see the kind of output
+            # returned in here. Example if you have the following tensor x
             #      x =tensor([[1, 2,3, 4, 5],
-                    #        [6, 7, 8, 9, 10],
-                    #        [11, 12, 13, 14, 15]]) it is tensoe 3,5
+            #        [6, 7, 8, 9, 10],
+            #        [11, 12, 13, 14, 15]]) it is tensor 3,5
             # x1,x2 =PairEnum(x)
             # x1 will be size of (9,5) and it will look like this
             # x1 =tensor([[1, 2,3, 4, 5]image1,
-                    #        [6, 7, 8, 9, 10]image2,
-                    #        [11, 12, 13, 14, 15]image3,
-                    #        [1, 2,3, 4, 5]image,
-                    #        [6, 7, 8, 9, 10],
-                    #        [11, 12, 13, 14, 15],
-                    #        [1, 2,3, 4, 5],
-                    #        [6, 7, 8, 9, 10],
-                    #        [11, 12, 13, 14, 15]])
-            # x2 will be size of (9,5) and it look like this
+            #        [6, 7, 8, 9, 10]image2,
+            #        [11, 12, 13, 14, 15]image3,
+            #        [1, 2,3, 4, 5]image,
+            #        [6, 7, 8, 9, 10],
+            #        [11, 12, 13, 14, 15],
+            #        [1, 2,3, 4, 5],
+            #        [6, 7, 8, 9, 10],
+            #        [11, 12, 13, 14, 15]])
+            # x2 will be size of (9,5) and it looks like this
             # x2 =tensor([[1, 2,3, 4, 5]image1,
             #             [1, 2,3, 4, 5]image1,
             #             [1, 2,3, 4, 5]image1,
@@ -139,7 +142,7 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
             #             [11, 12, 13, 14, 15]])
 
             # Slice the rank_idx previously computed and take the top-5 elements. Now the tensor has this size (4624,5)
-            rank_idx1, rank_idx2 = rank_idx1[:, :args.topk], rank_idx2[:,:args.topk]
+            rank_idx1, rank_idx2 = rank_idx1[:, :args.topk], rank_idx2[:, :args.topk]
 
             # Sorts the elements of the input tensor along a given dimension in ascending order by value on both tensors along dimension 1
             rank_idx1, _ = torch.sort(rank_idx1, dim=1)
@@ -170,26 +173,26 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
             # the first augmentation, then slice using the tensor mask, finally apply PairEnum
             _, prob2_ulb = PairEnum(prob2_bar[~mask_lb])  # Example: tensor (62,5) --> (4624,5)
 
-
             # Compute the Cross entropy (CE) loss over the labeled sample (using the tensor mask to slice them)
             loss_ce = criterion1(output1[mask_lb], label[mask_lb])
-            acc = accuracy(output1[mask_lb], label[mask_lb]) # calculating the accuracy  
-            acc_record.update(acc[0].item(),x.size(0))
+            acc = accuracy(output1[mask_lb], label[mask_lb])  # calculating the accuracy
+            acc_record.update(acc[0].item(), x.size(0))
             # Compute the Binary Cross entropy (BCE) loss over the labeled sample (using the tensor mask to slice them)
             loss_bce = criterion2(prob1_ulb, prob2_ulb, target_ulb)
             # Compute the Mean Squared error (MSE) loss used as consistency loss between base samples and augmented ones
-            ## csonsitencey loss start
+
+            # consistency loss start
             consistency_loss_c1 = F.mse_loss(prob1, prob1_bar)
             consistency_loss_c2 = F.mse_loss(prob2, prob2_bar)
-            consistency_loss =  consistency_loss_c1 + consistency_loss_c2
-            ## consistence loss end 
+            consistency_loss = consistency_loss_c1 + consistency_loss_c2
+            # consistency loss end
+
             # consistency_loss =F.mse_loss(prob1, prob1_bar)+F.mse_loss(prob2, prob2_bar)
             # Add up, apply weights and compute the final loss. Then update the loss AverageMeter with that value
-            # orginal loss
-            # jaccopo 
+            # original loss
             # alpha = random.uniform(0, 1)
             # beta  = 1-alpha
-            loss  = loss_ce + loss_bce + w * consistency_loss
+            loss = loss_ce + loss_bce + w * consistency_loss
             loss_record.update(loss.item(), x.size(0))
             loss_record_CEL.update(loss_ce.item(), x.size(0))
             loss_record_BCE.update(loss_bce.item(), x.size(0))
@@ -201,31 +204,33 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
             loss.backward()
             optimizer.step()
 
-            # Perform a step on the input exp_lr_scheduler (scheduler used to define the learning rate)
-        
-        exp_lr_scheduler.step()  # FIXME: Put here to avoid warning, if there are problems move it back above
-        # Print the result of the training procedure over that epoch
-        
-        print('Train Epoch: {} Avg Loss: {:.4f}'.format(epoch, loss_record.avg))
+        # Perform a step on the input exp_lr_scheduler (scheduler used to define the learning rate)
+        exp_lr_scheduler.step()
 
+        # Print the result of the training procedure over that epoch
+        print('Train Epoch: {} Avg Loss: {:.4f}'.format(epoch, loss_record.avg))
 
         # Set the head argument to 'head1', this to ensure that we test the supervised head in the training step below
         print('test on labeled classes')
         args.head = 'head1'
-        acc_H1,nmi_H1,ari_H1,acc_testing_H1=test(model, labeled_eval_loader, args)
+        acc_H1, nmi_H1, ari_H1, acc_testing_H1 = test(model, labeled_eval_loader, args)
 
         # Set the head argument to 'head2', this to ensure that we test the unsupervised head in the training step below
         print('test on unlabeled classes')
         args.head = 'head2'
-        acc_H2,nmi_H2,ari_H2,_=test(model, unlabeled_eval_loader, args)
-            # Print the result of the testing procedure obtained computing the three metrics above
+        acc_H2, nmi_H2, ari_H2, _ = test(model, unlabeled_eval_loader, args)
+        # Print the result of the testing procedure obtained computing the three metrics above
         if logging_on:
-            wandb.log({"epoch": epoch,"Total_average_loss":loss_record.avg,"Cross_entropy_loss":loss_record_CEL.avg,
-                   "Binary_cross_entropy_loss":loss_record_BCE.avg,"Consistency_loss_part_a":loss_record_CON_1.avg,
-                   "Consistency_loss_part_b":loss_record_CON_2.avg,"Consistency_loss_total":loss_record_CON_total.avg,
-                   "Head_1_training_accuracy":acc_record.avg,
-                   "cluster_acc_Head_1": acc_H1,"nmi_Head_1":nmi_H1,"ari_Head_1":ari_H1,"testing_acc_Head_1":acc_testing_H1,
-                   "cluster_acc_Head_2": acc_H2,"nmi_Head_2":nmi_H2,"ari_Head_2":ari_H2,"lr":exp_lr_scheduler.get_last_lr()[0]}, step = epoch)
+            wandb.log({"epoch": epoch, "Total_average_loss": loss_record.avg, "Cross_entropy_loss": loss_record_CEL.avg,
+                       "Binary_cross_entropy_loss": loss_record_BCE.avg,
+                       "Consistency_loss_part_a": loss_record_CON_1.avg,
+                       "Consistency_loss_part_b": loss_record_CON_2.avg,
+                       "Consistency_loss_total": loss_record_CON_total.avg,
+                       "Head_1_training_accuracy": acc_record.avg,
+                       "cluster_acc_Head_1": acc_H1, "nmi_Head_1": nmi_H1, "ari_Head_1": ari_H1,
+                       "testing_acc_Head_1": acc_testing_H1,
+                       "cluster_acc_Head_2": acc_H2, "nmi_Head_2": nmi_H2, "ari_Head_2": ari_H2,
+                       "lr": exp_lr_scheduler.get_last_lr()[0]}, step=epoch)
 
 
 def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args):
@@ -235,23 +240,24 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
     criterion2 = BCE()
     for epoch in range(args.epochs):
         loss_record = AverageMeter()
-        loss_record_CEL = AverageMeter()   # average metter to follow the cross entropy loss
-        loss_record_BCE = AverageMeter()   # average meter to follow the binary cross entropy loss
-        loss_record_CON_1 = AverageMeter() # average meter to follow the first paramter of consistency loss
-        loss_record_CON_2 = AverageMeter() # average meter to follow the second paramter of consistency loss
-        loss_record_CON_total = AverageMeter() # average meter to follow the total of consistency loss
-        loss_record_IL = AverageMeter() # average meter to follow the incrementeal learning
+        loss_record_CEL = AverageMeter()  # average metter to follow the cross entropy loss
+        loss_record_BCE = AverageMeter()  # average meter to follow the binary cross entropy loss
+        loss_record_CON_1 = AverageMeter()  # average meter to follow the first paramter of consistency loss
+        loss_record_CON_2 = AverageMeter()  # average meter to follow the second paramter of consistency loss
+        loss_record_CON_total = AverageMeter()  # average meter to follow the total of consistency loss
+        loss_record_IL = AverageMeter()  # average meter to follow the incrementeal learning
 
-        acc_record = AverageMeter() # track the accuracy of the first head
+        acc_record = AverageMeter()  # track the accuracy of the first head
         model.train()
         w = args.rampup_coefficient * ramps.sigmoid_rampup(epoch, args.rampup_length)
         for batch_idx, ((x, x_bar), label, idx) in enumerate(tqdm(train_loader)):
             x, x_bar, label = x.to(device), x_bar.to(device), label.to(device)
             output1, output2, feat = model(x)
             output1_bar, output2_bar, _ = model(x_bar)
-            prob1, prob1_bar, prob2, prob2_bar = F.softmax(output1, dim=1), F.softmax(output1_bar, dim=1), F.softmax(output2, dim=1), F.softmax(output2_bar, dim=1)
-            # we transfer them to probabilityies
-            mask_lb = label < args.num_labeled_classes  # select unlabled data features.
+            prob1, prob1_bar, prob2, prob2_bar = F.softmax(output1, dim=1), F.softmax(output1_bar, dim=1), F.softmax(
+                output2, dim=1), F.softmax(output2_bar, dim=1)
+            # we transfer them to probabilities
+            mask_lb = label < args.num_labeled_classes  # select unlabeled data features.
 
             rank_feat = (feat[~mask_lb]).detach()
 
@@ -263,33 +269,34 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
             rank_idx2, _ = torch.sort(rank_idx2, dim=1)
 
             rank_diff = rank_idx1 - rank_idx2
-            rank_diff = torch.sum(torch.abs(rank_diff),
-                                  dim=1)  # it indicate they are exactly same so they set their label pairwise to 1.
+            rank_diff = torch.sum(torch.abs(rank_diff), dim=1)  # it indicates they are exactly same so they set
+            # their label pairwise to 1.
             target_ulb = torch.ones_like(rank_diff).float().to(device)
             target_ulb[rank_diff > 0] = -1  # otherwise we set them to -1. they belong to different classes
 
             prob1_ulb, _ = PairEnum(prob2[~mask_lb])
             _, prob2_ulb = PairEnum(prob2_bar[~mask_lb])
 
-            loss_ce = criterion1(output1[mask_lb], label[mask_lb])  # crosss entropy loss for supervised part
+            loss_ce = criterion1(output1[mask_lb], label[mask_lb])  # crosses entropy loss for supervised part
             # all above very similar to before 
-     
-            acc = accuracy(output1[mask_lb], label[mask_lb]) # calculating the accuracy  
-            acc_record.update(acc[0].item(),x.size(0))
+
+            acc = accuracy(output1[mask_lb], label[mask_lb])  # calculating the accuracy
+            acc_record.update(acc[0].item(), x.size(0))
             # mask_lb used to access unlabeled stuff.
-            # (output2[~mask_lb]).detach().max(1)[1] you have 62*5 tensor you removed gradient return the biggest tensor.
+            # (output2[~mask_lb]).detach().max(1)[1] you have 62*5 tensor you removed gradient return the biggest tensor
             # but I want to return the index of biggest not the values so i expect to have values between 0 and 5
             # then i add 5 so i get the new labeled of unlabeled class to be
             label[~mask_lb] = (output2[~mask_lb]).detach().max(1)[1] + args.num_labeled_classes  # 5 +
 
-            # calculating loss entropy between output 1 and labels pseudo
-            # , for the unlabelled data we use the pseudo-labels ˆ yu i , which are generated on-the-fly from the head ηu at each forward pass
-            loss_ce_add = w * criterion1(output1[~mask_lb],label[~mask_lb]) / args.rampup_coefficient * args.increment_coefficient
+            # calculating loss entropy between output 1 and labels pseudo for the unlabelled data we use the
+            # pseudo-labels ˆ yu i , which are generated on-the-fly from the head ηu at each forward pass
+            loss_ce_add = w * criterion1(output1[~mask_lb],
+                                         label[~mask_lb]) / args.rampup_coefficient * args.increment_coefficient
 
             loss_bce = criterion2(prob1_ulb, prob2_ulb, target_ulb)  # binary cross entropy
             consistency_loss_c1 = F.mse_loss(prob1, prob1_bar)
             consistency_loss_c2 = F.mse_loss(prob2, prob2_bar)
-            consistency_loss =  consistency_loss_c1 + consistency_loss_c2
+            consistency_loss = consistency_loss_c1 + consistency_loss_c2
             loss = loss_ce + loss_bce + loss_ce_add + w * consistency_loss
 
             loss_record.update(loss.item(), x.size(0))
@@ -306,18 +313,22 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
         print('Train Epoch: {} Avg Loss: {:.4f}'.format(epoch, loss_record.avg))
         print('test on labeled classes')
         args.head = 'head1'
-        acc_H1,nmi_H1,ari_H1,acc_testing_H1=test(model, labeled_eval_loader, args)
+        acc_H1, nmi_H1, ari_H1, acc_testing_H1 = test(model, labeled_eval_loader, args)
         print('test on unlabeled classes')
         args.head = 'head2'
-        acc_H2,nmi_H2,ari_H2,_=test(model, unlabeled_eval_loader, args)
+        acc_H2, nmi_H2, ari_H2, _ = test(model, unlabeled_eval_loader, args)
         if logging_on:
-            wandb.log({"epoch": epoch,"Total_average_loss":loss_record.avg,"Cross_entropy_loss":loss_record_CEL.avg,
-                   "Binary_cross_entropy_loss":loss_record_BCE.avg,"Consistency_loss_part_a":loss_record_CON_1.avg,
-                   "Consistency_loss_part_b":loss_record_CON_2.avg,"Consistency_loss_total":loss_record_CON_total.avg,
-                   "Head_1_training_accuracy":acc_record.avg,
-                   "cluster_acc_Head_1": acc_H1,"nmi_Head_1":nmi_H1,"ari_Head_1":ari_H1,"testing_acc_Head_1":acc_testing_H1,
-                   "cluster_acc_Head_2": acc_H2,"nmi_Head_2":nmi_H2,"ari_Head_2":ari_H2,"lr":exp_lr_scheduler.get_last_lr()[0],
-                   "incremental_loss":loss_record_IL.avg}, step = epoch)
+            wandb.log({"epoch": epoch, "Total_average_loss": loss_record.avg, "Cross_entropy_loss": loss_record_CEL.avg,
+                       "Binary_cross_entropy_loss": loss_record_BCE.avg,
+                       "Consistency_loss_part_a": loss_record_CON_1.avg,
+                       "Consistency_loss_part_b": loss_record_CON_2.avg,
+                       "Consistency_loss_total": loss_record_CON_total.avg,
+                       "Head_1_training_accuracy": acc_record.avg,
+                       "cluster_acc_Head_1": acc_H1, "nmi_Head_1": nmi_H1, "ari_Head_1": ari_H1,
+                       "testing_acc_Head_1": acc_testing_H1,
+                       "cluster_acc_Head_2": acc_H2, "nmi_Head_2": nmi_H2, "ari_Head_2": ari_H2,
+                       "lr": exp_lr_scheduler.get_last_lr()[0],
+                       "incremental_loss": loss_record_IL.avg}, step=epoch)
 
 
 def test(model, test_loader, args):
@@ -326,7 +337,7 @@ def test(model, test_loader, args):
     # Instantiate two numpy arrays, one for predictions and oen for targets
     preds = np.array([])
     targets = np.array([])
-    acc_record = AverageMeter() # track the accuracy of the first head
+    acc_record = AverageMeter()  # track the accuracy of the first head
     # loss_record = AverageMeter()
 
     # Iterate for each batch in the dataloader
@@ -353,26 +364,26 @@ def test(model, test_loader, args):
         # term, which is the index of that value, since the index is equal to the predicted class for that input sample.
         _, pred = output.max(1)
 
-        # Convert tensor to numpy using 'label.cpu.numpy', then append the value in the respective numpy array
+        # Convert tensor to numpy using 'X.cpu.numpy', then append the value in the respective numpy array
         if args.head == 'head1':
-            acc_testing = accuracy(output, label) # calculating the accuracy
-            acc_record.update(acc_testing[0].item(),x.size(0))
-        else :
-            acc_testing=0
+            acc_testing = accuracy(output, label)  # calculating the accuracy
+            acc_record.update(acc_testing[0].item(), x.size(0))
+        else:
+            acc_testing = 0
         targets = np.append(targets, label.cpu().numpy())
         preds = np.append(preds, pred.cpu().numpy())
 
     # Compute the accuracy metrics for the current test step, see supervised_learning.py for full explanation
-    acc, nmi, ari = cluster_acc(targets.astype(int), preds.astype(int)), nmi_score(targets, preds), ari_score(targets, preds)
+    acc, nmi, ari = cluster_acc(targets.astype(int), preds.astype(int)), nmi_score(targets, preds), ari_score(targets,
+                                                                                                              preds)
 
-
-
-    print('Test cluster acc {:.4f}, nmi {:.4f}, ari {:.4f}, test accuracy {:.4f}'.format(acc, nmi, ari,acc_record.avg))
-    return acc, nmi, ari,acc_record.avg
+    print('Test cluster acc {:.4f}, nmi {:.4f}, ari {:.4f}, test accuracy {:.4f}'.format(acc, nmi, ari, acc_record.avg))
+    return acc, nmi, ari, acc_record.avg
 
 
 if __name__ == "__main__":
     import argparse
+
     # Initialize the ArgumentParser
     parser = argparse.ArgumentParser(description='cluster', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     # Get all the needed input arguments
@@ -381,7 +392,7 @@ if __name__ == "__main__":
     parser.add_argument('--momentum', type=float, default=0.9)  # Momentum term of optimizer
     parser.add_argument('--weight_decay', type=float, default=1e-4)  # Weight decay of optimizer
     parser.add_argument('--epochs', default=200, type=int)  # Number of epochs
-    parser.add_argument('--rampup_length', default=150,  type=int)  # Ramp-up length passed to ramps.py function
+    parser.add_argument('--rampup_length', default=150, type=int)  # Ramp-up length passed to ramps.py function
     parser.add_argument('--rampup_coefficient', type=float, default=50)  # Ramp-up coefficient
     parser.add_argument('--increment_coefficient', type=float, default=0.05)  # Incremental learning coefficient
     parser.add_argument('--step_size', default=170, type=int)  # Step size of learning rate scheduler
@@ -390,14 +401,17 @@ if __name__ == "__main__":
     parser.add_argument('--num_labeled_classes', default=5, type=int)  # Number of labeled classes
     parser.add_argument('--dataset_root', type=str, default='./data/datasets/CIFAR/')  # Dataset root directory
     parser.add_argument('--exp_root', type=str, default='./data/experiments/')  # Directory to save the resulting files
-    parser.add_argument('--warmup_model_dir', type=str,  default='./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth')  # Directory to find the supervised pretrained model
+    parser.add_argument('--warmup_model_dir', type=str,
+                        default='./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth')  # Directory to find the supervised pretrained model
     parser.add_argument('--topk', default=5, type=int)  # Number of top elements that we want to compare
     parser.add_argument('--IL', action='store_true', default=False, help='w/ incremental learning')  # Enable/Disable IL
     parser.add_argument('--model_name', type=str, default='resnet')  # Name of the model
-    parser.add_argument('--dataset_name', type=str, default='cifar10',  help='options: cifar10, cifar100, svhn')  # Name of the used dataset
+    parser.add_argument('--dataset_name', type=str, default='cifar10',
+                        help='options: cifar10, cifar100, svhn')  # Name of the used dataset
     parser.add_argument('--seed', default=1, type=int)  # Seed to use
     parser.add_argument('--mode', type=str, default='train')  # Mode: train or test
-    logging_on = True # variable to stop  logging when I donot want to log anything
+    logging_on = True  # Variable to stop logging when we do not want to log anything
+
     # Extract the args and make them available in the args object
     args = parser.parse_args()
     # Define if cuda can be used and initialize the device used by torch. Furthermore, specify the torch seed
@@ -414,6 +428,7 @@ if __name__ == "__main__":
         os.makedirs(model_dir)
     # Define the name of the path to save the trained model
     args.model_dir = model_dir + '/' + '{}.pth'.format(args.model_name)
+
     New_resnet = True
     # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_Barlow_twins_2.pth resnet_IL_cifar10_Barlow_twins_2
     if New_resnet:
@@ -433,26 +448,26 @@ if __name__ == "__main__":
     num_classes = args.num_labeled_classes + args.num_unlabeled_classes
     # to login into wandb this is the password
     if logging_on:
-        wandb.login() #4619e908b2f2c21261030dae4c66556d4f1f3178
+        wandb.login()  # 4619e908b2f2c21261030dae4c66556d4f1f3178
         config = {
-        "learning_rate":args.lr,
-        "batch_size":args.batch_size,
-        "dataset":args.dataset_name,
-        "unlabled_classes":args.num_unlabeled_classes,
-        "labled_classes" :args.num_labeled_classes,
-        "topk":args.topk,
-        "momentum":args.momentum,
-        "weight_decay":args.weight_decay,
-        "epochs":args.epochs,
-        "rampup_length":args.rampup_length,
-        "rampup_coefficient":args.rampup_coefficient,
-        "increment_coefficient":args.increment_coefficient,
-        "rampup_coefficient":args.rampup_coefficient,
-        "step_size":args.step_size,
-        "IL":args.IL,
-        "mode":args.mode
+            "learning_rate": args.lr,
+            "batch_size": args.batch_size,
+            "dataset": args.dataset_name,
+            "unlabled_classes": args.num_unlabeled_classes,
+            "labled_classes": args.num_labeled_classes,
+            "topk": args.topk,
+            "momentum": args.momentum,
+            "weight_decay": args.weight_decay,
+            "epochs": args.epochs,
+            "rampup_length": args.rampup_length,
+            "rampup_coefficient": args.rampup_coefficient,
+            "increment_coefficient": args.increment_coefficient,
+            "rampup_coefficient": args.rampup_coefficient,
+            "step_size": args.step_size,
+            "IL": args.IL,
+            "mode": args.mode
         }
-        wandb.init(project="trends_project", entity="mhaggag96", config = config, save_code = True)
+        wandb.init(project="trends_project", entity="mhaggag96", config=config, save_code=True)
 
     # If we are in training mode
     if args.mode == 'train':
@@ -484,7 +499,6 @@ if __name__ == "__main__":
                                              aug='once', shuffle=True, target_list=range(args.num_labeled_classes))
 
         # Unlabeled loader only, used for the evaluation over unlabeled samples
-
         unlabeled_eval_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='train',
                                               aug=None, shuffle=False,
                                               target_list=range(args.num_labeled_classes, num_classes))
@@ -496,7 +510,7 @@ if __name__ == "__main__":
 
         # Labeled loader only, used for the evaluation over labeled samples
         labeled_eval_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='test',
-                                            aug=None,  shuffle=False, target_list=range(args.num_labeled_classes))
+                                            aug=None, shuffle=False, target_list=range(args.num_labeled_classes))
 
         # labeled test set, contains both labeled and unlabeled
         all_eval_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='test',
