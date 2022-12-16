@@ -105,8 +105,6 @@ class ResNet(t_SNE, nn.Module):
         out = self.layer4(out)  # Output has shape of (256,512,4,4)
         out = F.avg_pool2d(out, 4)  # Average pooling with kernel size 4. the output has shape of (256,512,1,1)
 
-        # FIXME: Should features be computed here?
-
         out = out.view(out.size(0), -1)  # Reshaping to specific size. the output has shape of (256,512)
         out = F.relu(out)  # Add ReLU to benefit ranking. The output has size of (256,512)
 
