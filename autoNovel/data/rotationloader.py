@@ -248,3 +248,16 @@ class DataLoader(object):
 
     def __len__(self):
         return self.epoch_size / self.batch_size
+if __name__ == '__main__':
+    dataset_train = GenericDataset(
+        dataset_name='cifar10',
+        split='train',
+        dataset_root='./../data/datasets/CIFAR/'
+       )
+    dataset_test = GenericDataset(
+        dataset_name='cifar10',
+        split='test',
+        dataset_root='./../data/datasets/CIFAR/'
+        )
+    print(len(dataset_train))
+    print(len(dataset_test))
