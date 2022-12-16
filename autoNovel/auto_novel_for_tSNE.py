@@ -8,14 +8,12 @@ from sklearn.cluster import KMeans
 from utils.util import BCE, PairEnum, cluster_acc, Identity, AverageMeter, seed_torch, accuracy
 from utils import ramps
 from models.resnet_with_tSNE import ResNet, BasicBlock, resnet_sim
-from data.cifarloader import CIFAR10Loader, CIFAR10LoaderMix, CIFAR100Loader, CIFAR100LoaderMix
+from data.cifarloader_unbalanced import CIFAR10Loader, CIFAR10LoaderMix, CIFAR100Loader, CIFAR100LoaderMix
 from data.svhnloader import SVHNLoader, SVHNLoaderMix
 from tqdm import tqdm
 import numpy as np
 import os
-# wandb importing
 import wandb
-import random
 import pandas as pd
 
 # global current_epoch
@@ -113,7 +111,7 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
             rank_idx1, rank_idx2 = PairEnum(rank_idx)  # mask is set to none
             # rank_idx1 (4624,512) repeated variable. imagine that you have 68 pictures features, and we repeat them
             # 68 times so all the whole variable is copied and put 64 times.
-            # rank_idx2. each feature vector size 512 i repeat it 68 times so i have (68,34816)=(68,68*512). then
+            # rank_idx2. each feature vector size 512 I repeat it 68 times, so I have (68,34816)=(68,68*512). then
             # i reshape it to (-1,512) so that the final vector becomes  size of [4624, 512]
             # if you don't understand the things above ignore it and look at example to see the kind of output
             # returned in here. Example if you have the following tensor x
@@ -149,10 +147,10 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
             rank_idx1, _ = torch.sort(rank_idx1, dim=1)
             rank_idx2, _ = torch.sort(rank_idx2, dim=1)
 
-            # Compute the difference between the previously computed sorted rank. This matrix to have alot of 0s and some postive and some negative numbers.
+            # Compute the difference between the previously computed sorted rank. This matrix to have alot of 0s and some positive and some negative numbers.
             rank_diff = rank_idx1 - rank_idx2
             # Sum the elements of the input tensor along a given dimension, in this case dimension 1 (which as size 5),
-            # applying abs operation accord each variable in the matrix so you shouldn't have any negative number
+            # applying abs operation accord each variable in the matrix, so you shouldn't have any negative number
             rank_diff = torch.sum(torch.abs(rank_diff), dim=1)  # Example: output tensor (1,4624)
 
             # Instantiate an array of ones (1) with the same shape and type as a given array (1,4624)
@@ -241,12 +239,12 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
     criterion2 = BCE()
     for epoch in range(args.epochs):
         loss_record = AverageMeter()
-        loss_record_CEL = AverageMeter()  # average metter to follow the cross entropy loss
+        loss_record_CEL = AverageMeter()  # average meter to follow the cross entropy loss
         loss_record_BCE = AverageMeter()  # average meter to follow the binary cross entropy loss
-        loss_record_CON_1 = AverageMeter()  # average meter to follow the first paramter of consistency loss
-        loss_record_CON_2 = AverageMeter()  # average meter to follow the second paramter of consistency loss
+        loss_record_CON_1 = AverageMeter()  # average meter to follow the first parameter of consistency loss
+        loss_record_CON_2 = AverageMeter()  # average meter to follow the second parameter of consistency loss
         loss_record_CON_total = AverageMeter()  # average meter to follow the total of consistency loss
-        loss_record_IL = AverageMeter()  # average meter to follow the incrementeal learning
+        loss_record_IL = AverageMeter()  # average meter to follow the incremental learning
 
         acc_record = AverageMeter()  # track the accuracy of the first head
         model.train()
@@ -284,9 +282,9 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
             acc = accuracy(output1[mask_lb], label[mask_lb])  # calculating the accuracy
             acc_record.update(acc[0].item(), x.size(0))
             # mask_lb used to access unlabeled stuff.
-            # (output2[~mask_lb]).detach().max(1)[1] you have 62*5 tensor you removed gradient return the biggest tensor
-            # but I want to return the index of biggest not the values so i expect to have values between 0 and 5
-            # then i add 5 so i get the new labeled of unlabeled class to be
+            # (output2[~mask_lb]).detach().max(1)[1] you have 62*5 tensor you removed gradient return the biggest tensor,
+            # but I want to return the index of biggest not the values, so I expect to have values between 0 and 5
+            # then I add 5, so I get the new labeled of unlabeled class to be
             label[~mask_lb] = (output2[~mask_lb]).detach().max(1)[1] + args.num_labeled_classes  # 5 +
 
             # calculating loss entropy between output 1 and labels pseudo for the unlabelled data we use the
@@ -379,6 +377,7 @@ def test(model, test_loader, plot_name, args):
     feature_label_tsne_dataframe = model.compute_and_plot_2d_t_sne(print_df=True,
                                                                    plot_name=str('tSNE_'+args.head+'_'+plot_name),
                                                                    verbose=1, perplexity=40, n_iter=300)
+    model.__init_tsne__()
 
     # Compute the accuracy metrics for the current test step, see supervised_learning.py for full explanation
     acc, nmi, ari = cluster_acc(targets.astype(int), preds.astype(int)), nmi_score(targets, preds), ari_score(targets,
@@ -467,7 +466,6 @@ if __name__ == "__main__":
             "rampup_length": args.rampup_length,
             "rampup_coefficient": args.rampup_coefficient,
             "increment_coefficient": args.increment_coefficient,
-            "rampup_coefficient": args.rampup_coefficient,
             "step_size": args.step_size,
             "IL": args.IL,
             "mode": args.mode
@@ -491,35 +489,50 @@ if __name__ == "__main__":
 
     # If the dataset argument is 'cifar10' then use its apposite loader, see cifarloader.py for full explanation
     if args.dataset_name == 'cifar10':
+        # Dictionary of the samples that we want to remove from each class. For each class (labels from 0 to 9) it is
+        # possible to specify how many samples we want to be removed. They will be removed randomly in that class.
+        unbalanced = False
+        if unbalanced:
+            sample_per_class_to_remove_dictionary = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0}
+        else:
+            sample_per_class_to_remove_dictionary = None
+
         # Main loader used to train the model. It is mixed (labeled+unlabeled data) and it has a double augmentation.
         # It is in format of ((picture1,picture2),label,index) where picture 1 is the original example, picture 2 is
         # the augmentation of the original example, label is the label for both the samples and index is the position
         # of that specific example in the original dataset
+        # TODO: Implement also here the possibility to remove samples
         mix_train_loader = CIFAR10LoaderMix(root=args.dataset_root, batch_size=args.batch_size, split='train',
                                             aug='twice', shuffle=True, labeled_list=range(args.num_labeled_classes),
-                                            unlabeled_list=range(args.num_labeled_classes, num_classes))
+                                            unlabeled_list=range(args.num_labeled_classes, num_classes),
+                                            remove_dict=sample_per_class_to_remove_dictionary)
 
         # Loader never used
         labeled_train_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='train',
-                                             aug='once', shuffle=True, target_list=range(args.num_labeled_classes))
+                                             aug='once', shuffle=True, target_list=range(args.num_labeled_classes),
+                                             remove_dict=sample_per_class_to_remove_dictionary)
 
-        # Unlabeled loader only, used for the evaluation over unlabeled samples
+        # 4 - Unlabeled loader only, used for the evaluation over unlabeled samples
         unlabeled_eval_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='train',
                                               aug=None, shuffle=False,
-                                              target_list=range(args.num_labeled_classes, num_classes))
+                                              target_list=range(args.num_labeled_classes, num_classes),
+                                              remove_dict=sample_per_class_to_remove_dictionary)
 
-        # unlabeled evaluation set
+        # 2 - 5 unlabeled evaluation set
         unlabeled_eval_loader_test = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='test',
                                                    aug=None, shuffle=False,
-                                                   target_list=range(args.num_labeled_classes, num_classes))
+                                                   target_list=range(args.num_labeled_classes, num_classes),
+                                                   remove_dict=sample_per_class_to_remove_dictionary)
 
-        # Labeled loader only, used for the evaluation over labeled samples
+        # 1 - Labeled loader only, used for the evaluation over labeled samples
         labeled_eval_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='test',
-                                            aug=None, shuffle=False, target_list=range(args.num_labeled_classes))
+                                            aug=None, shuffle=False, target_list=range(args.num_labeled_classes),
+                                            remove_dict=sample_per_class_to_remove_dictionary)
 
-        # labeled test set, contains both labeled and unlabeled
+        # 3 - labeled test set, contains both labeled and unlabeled
         all_eval_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='test',
-                                        aug=None, shuffle=False, target_list=range(num_classes))
+                                        aug=None, shuffle=False, target_list=range(num_classes),
+                                        remove_dict=sample_per_class_to_remove_dictionary)
 
     # Otherwise, the dataset argument is 'cifar100' then use its apposite loader, see comments above on cifar10
     elif args.dataset_name == 'cifar100':
@@ -587,8 +600,8 @@ if __name__ == "__main__":
 
     # If the mode argument is 'test', then run the testing procedure
     else:
-        print("model loaded from {}.".format(args.model_dir))
         # if the IL argument is 'True', then change the head1 to (10,512)
+        print("model loaded from {}.".format(args.model_dir))
         if args.IL:
             model.head1 = nn.Linear(512, num_classes).to(device)
         # Load the model from the specified path
@@ -610,8 +623,9 @@ if __name__ == "__main__":
     args.head = 'head2'
     print('test on unlabeled classes (train split)')
     test(model, unlabeled_eval_loader, 'unlabeled_classes_train_split', args)
-    args.head = 'testing'
+
     print('\n\ntest on unlabeled classes (test split)')
     test(model, unlabeled_eval_loader_test, 'unlabeled_classes_test_split', args)
+
     if logging_on:
         wandb.finish()
