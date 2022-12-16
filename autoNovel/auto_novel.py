@@ -13,7 +13,6 @@ from data.svhnloader import SVHNLoader, SVHNLoaderMix
 from tqdm import tqdm
 import numpy as np
 import os
-# wandb importing
 import wandb
 import random
 
@@ -112,7 +111,7 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
             rank_idx1, rank_idx2 = PairEnum(rank_idx)  # mask is set to none
             # rank_idx1 (4624,512) repeated variable. imagine that you have 68 pictures features, and we repeat them
             # 68 times so all the whole variable is copied and put 64 times.
-            # rank_idx2. each feature vector size 512 i repeat it 68 times so i have (68,34816)=(68,68*512). then
+            # rank_idx2. each feature vector size 512 I repeat it 68 times, so I have (68,34816)=(68,68*512). then
             # i reshape it to (-1,512) so that the final vector becomes  size of [4624, 512]
             # if you don't understand the things above ignore it and look at example to see the kind of output
             # returned in here. Example if you have the following tensor x
@@ -148,10 +147,10 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
             rank_idx1, _ = torch.sort(rank_idx1, dim=1)
             rank_idx2, _ = torch.sort(rank_idx2, dim=1)
 
-            # Compute the difference between the previously computed sorted rank. This matrix to have alot of 0s and some postive and some negative numbers.
+            # Compute the difference between the previously computed sorted rank. This matrix to have alot of 0s and some positive and some negative numbers.
             rank_diff = rank_idx1 - rank_idx2
             # Sum the elements of the input tensor along a given dimension, in this case dimension 1 (which as size 5),
-            # applying abs operation accord each variable in the matrix so you shouldn't have any negative number
+            # applying abs operation accord each variable in the matrix, so you shouldn't have any negative number
             rank_diff = torch.sum(torch.abs(rank_diff), dim=1)  # Example: output tensor (1,4624)
 
             # Instantiate an array of ones (1) with the same shape and type as a given array (1,4624)
@@ -240,12 +239,12 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
     criterion2 = BCE()
     for epoch in range(args.epochs):
         loss_record = AverageMeter()
-        loss_record_CEL = AverageMeter()  # average metter to follow the cross entropy loss
+        loss_record_CEL = AverageMeter()  # average meter to follow the cross entropy loss
         loss_record_BCE = AverageMeter()  # average meter to follow the binary cross entropy loss
-        loss_record_CON_1 = AverageMeter()  # average meter to follow the first paramter of consistency loss
-        loss_record_CON_2 = AverageMeter()  # average meter to follow the second paramter of consistency loss
+        loss_record_CON_1 = AverageMeter()  # average meter to follow the first parameter of consistency loss
+        loss_record_CON_2 = AverageMeter()  # average meter to follow the second parameter of consistency loss
         loss_record_CON_total = AverageMeter()  # average meter to follow the total of consistency loss
-        loss_record_IL = AverageMeter()  # average meter to follow the incrementeal learning
+        loss_record_IL = AverageMeter()  # average meter to follow the incremental learning
 
         acc_record = AverageMeter()  # track the accuracy of the first head
         model.train()
@@ -283,9 +282,9 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
             acc = accuracy(output1[mask_lb], label[mask_lb])  # calculating the accuracy
             acc_record.update(acc[0].item(), x.size(0))
             # mask_lb used to access unlabeled stuff.
-            # (output2[~mask_lb]).detach().max(1)[1] you have 62*5 tensor you removed gradient return the biggest tensor
-            # but I want to return the index of biggest not the values so i expect to have values between 0 and 5
-            # then i add 5 so i get the new labeled of unlabeled class to be
+            # (output2[~mask_lb]).detach().max(1)[1] you have 62*5 tensor you removed gradient return the biggest tensor,
+            # but I want to return the index of biggest not the values, so I expect to have values between 0 and 5
+            # then I add 5, so I get the new labeled of unlabeled class to be
             label[~mask_lb] = (output2[~mask_lb]).detach().max(1)[1] + args.num_labeled_classes  # 5 +
 
             # calculating loss entropy between output 1 and labels pseudo for the unlabelled data we use the
@@ -463,7 +462,6 @@ if __name__ == "__main__":
             "rampup_length": args.rampup_length,
             "rampup_coefficient": args.rampup_coefficient,
             "increment_coefficient": args.increment_coefficient,
-            "rampup_coefficient": args.rampup_coefficient,
             "step_size": args.step_size,
             "IL": args.IL,
             "mode": args.mode
