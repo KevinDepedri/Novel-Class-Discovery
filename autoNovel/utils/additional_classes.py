@@ -15,15 +15,23 @@ import seaborn as sns
 import random
 import time
 
-class CustomCIFAR_10(Dataset):
-    def __init__(self, remove_lst: list = None, remove_dict: dict = None, train=True, download=False):
-        self.cifar10 = datasets.CIFAR10(root='./CIFAR', download=download, train=train, transform=T.ToTensor())
+from PIL import Image
+from data.cifarloader_unbalanced import CIFAR10
+
+class CustomCIFAR10(Dataset):
+    def __init__(self, root, split='train+test', transform=None, target_list=range(5), download=False,
+                 remove_dict: dict = None, remove_lst: list = None):
+        # OLD LINE
+        # self.cifar10 = datasets.CIFAR10(root='./CIFAR', download=download, train=train, transform=T.ToTensor())
+        # NEW LINE
+        self.transform = transform
+        self.cifar10 = CIFAR10(root=root, split=split, transform=transform, target_list=target_list, download=download)
 
         wanted_format_input_dict = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0}
         assert remove_lst is None or remove_dict is None, "Cannot use both remove_lst and remove_dict together, " \
                                                           "instantiate only one of them"
-        assert remove_dict.keys() == wanted_format_input_dict.keys(), "Input remove_dict need to have all keys " \
-                                                                      "from 0 to 9"
+        assert remove_dict.keys() == wanted_format_input_dict.keys(), "Input remove_dict need to have all and only " \
+                                                                      "the keys from 0 to 9"
 
         under5000 = True
         for key in remove_dict.keys():
@@ -54,8 +62,19 @@ class CustomCIFAR_10(Dataset):
               f"{len(self.final_data), len(self.final_targets)}")
 
     def __getitem__(self, index):
-        data, target = self.final_data[index], self.final_targets[index]
-        return data, target  # index
+        img, target = self.final_data[index], self.final_targets[index]
+
+        # doing this so that it is consistent with all other datasets
+        # to return a PIL Image
+        img = Image.fromarray(img)
+
+        if self.transform is not None:
+            img = self.transform(img)
+
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+
+        return img, target, index
 
     def __len__(self):
         return len(self.final_data)
@@ -163,3 +182,13 @@ class t_SNE(object):
     def push_labels(self, labels_list):
         for x in labels_list:
             self.feature_vectors_labels.append(x.item())
+
+    # Used after the plot of a t-SNE to clear the variables for the next plot
+    def __init_tsne__(self):
+        self.feature_vectors = pd.DataFrame(columns=[f'Feature_{x}' for x in range(0, 512)])
+        self.feature_vectors_labels = []
+        self.feature_label_dataframe = None
+        self.num_classes = None
+        self.tsne = None
+        self.tsne_results = None
+        self.feature_label_tsne_dataframe = None
