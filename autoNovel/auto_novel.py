@@ -401,13 +401,11 @@ if __name__ == "__main__":
     parser.add_argument('--num_labeled_classes', default=5, type=int)  # Number of labeled classes
     parser.add_argument('--dataset_root', type=str, default='./data/datasets/CIFAR/')  # Dataset root directory
     parser.add_argument('--exp_root', type=str, default='./data/experiments/')  # Directory to save the resulting files
-    parser.add_argument('--warmup_model_dir', type=str,
-                        default='./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth')  # Directory to find the supervised pretrained model
+    parser.add_argument('--warmup_model_dir', type=str, default='./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth')  # Directory to find the supervised pretrained model
     parser.add_argument('--topk', default=5, type=int)  # Number of top elements that we want to compare
     parser.add_argument('--IL', action='store_true', default=False, help='w/ incremental learning')  # Enable/Disable IL
     parser.add_argument('--model_name', type=str, default='resnet')  # Name of the model
-    parser.add_argument('--dataset_name', type=str, default='cifar10',
-                        help='options: cifar10, cifar100, svhn')  # Name of the used dataset
+    parser.add_argument('--dataset_name', type=str, default='cifar10', help='options: cifar10, cifar100, svhn')  # Name of the used dataset
     parser.add_argument('--seed', default=1, type=int)  # Seed to use
     parser.add_argument('--mode', type=str, default='train')  # Mode: train or test
     logging_on = True  # Variable to stop logging when we do not want to log anything
@@ -593,23 +591,24 @@ if __name__ == "__main__":
         model.load_state_dict(torch.load(args.model_dir))
 
     # In the end, first test the model using head1 over the labeled dataloader
-    print('Evaluating on Head1')
+    print('\n\n\nEVALUATING ON HEAD1')
     args.head = 'head1'
-    print('test on labeled classes (test split)')
-    test(model, labeled_eval_loader, args)
+    print('Test on labeled classes (test split)')
+    test(model, labeled_eval_loader, 'labeled_classes_test_split', args)
     if args.IL:
-        print('test on unlabeled classes (test split)')
-        test(model, unlabeled_eval_loader_test, args)
-        print('test on all classes (test split)')
-        test(model, all_eval_loader, args)
+        print('\n\nTest on unlabeled classes (test split)')
+        test(model, unlabeled_eval_loader_test, 'unlabeled_classes_test_split', args)
+        print('\n\nTest on all classes (test split)')
+        test(model, all_eval_loader, 'all_classes_test_split', args)
 
     # Then test the model using head2 over the unlabeled dataloader
-    print('Evaluating on Head2')
+    print('\n\n\nEVALUATING ON HEAD2')
     args.head = 'head2'
     print('test on unlabeled classes (train split)')
-    test(model, unlabeled_eval_loader, args)
-    args.head = 'testing'
-    print('test on unlabeled classes (test split)')
-    test(model, unlabeled_eval_loader_test, args)
+    test(model, unlabeled_eval_loader, 'unlabeled_classes_train_split', args)
+
+    print('\n\ntest on unlabeled classes (test split)')
+    test(model, unlabeled_eval_loader_test, 'unlabeled_classes_test_split', args)
+
     if logging_on:
         wandb.finish()
