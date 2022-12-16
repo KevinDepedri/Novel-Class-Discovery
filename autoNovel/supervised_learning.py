@@ -4,15 +4,15 @@ import torch.nn.functional as F
 from torch.optim import SGD, lr_scheduler
 from sklearn.metrics.cluster import normalized_mutual_info_score as nmi_score
 from sklearn.metrics import adjusted_rand_score as ari_score
-from utils.util import cluster_acc, Identity, AverageMeter,accuracy
-from models.resnet import ResNet, BasicBlock,resnet_sim
+from utils.util import cluster_acc, Identity, AverageMeter, accuracy
+from models.resnet import ResNet, BasicBlock, resnet_sim
 from data.cifarloader import CIFAR10Loader, CIFAR100Loader
 from data.svhnloader import SVHNLoader
 from tqdm import tqdm
 import numpy as np
 import os
-#forlogging
 import wandb
+
 global logging_on
 
 '''
@@ -56,9 +56,8 @@ def train(model, train_loader, labeled_eval_loader, args):
             # Compute the CE loss and update the loss AverageMeter with that value of loss
             loss = criterion1(output1, label)
             loss_record.update(loss.item(), x.size(0))
-            acc = accuracy(output1, label) # calculating the accuracy  
-            accuracy_record.update(acc[0].item(),x.size(0))
-
+            acc = accuracy(output1, label)  # calculating the accuracy
+            accuracy_record.update(acc[0].item(), x.size(0))
 
             # Zero the gradient of the optimizer, back-propagate the loss and perform an optimization step
             optimizer.zero_grad()
@@ -66,7 +65,7 @@ def train(model, train_loader, labeled_eval_loader, args):
             optimizer.step()
 
         # Perform a step on the input exp_lr_scheduler (scheduler used to define the learning rate)
-        exp_lr_scheduler.step()  # FIXME: Put here to avoid warning, if there are problems move it back above
+        exp_lr_scheduler.step()
 
         # Print the result of the training procedure over that epoch
         print('Train Epoch: {} Avg Loss: {:.4f}'.format(epoch, loss_record.avg))
@@ -74,20 +73,13 @@ def train(model, train_loader, labeled_eval_loader, args):
         # Set the head argument to 'head1', this to ensure that we test the supervised head in the training step below
         print('test on labeled classes')
         args.head = 'head1'
-        acc_H1,nmi_H1,ari_H1,acc_testing_H1=test(model, labeled_eval_loader, args)
+        acc_H1, nmi_H1, ari_H1, acc_testing_H1 = test(model, labeled_eval_loader, args)
         if logging_on:
-            wandb.log({"epoch": epoch,"Total_average_loss":loss_record.avg,
-                   "Head_1_training_accuracy":accuracy_record.avg,
-                   "cluster_acc_Head_1": acc_H1,"nmi_Head_1":nmi_H1,"ari_Head_1":ari_H1,"testing_acc_Head_1":acc_testing_H1,
-                   "lr":exp_lr_scheduler.get_last_lr()[0]}, step = epoch)
-# TO_UNDERSTAND: Since head1 is imposed before running the test step we are getting predictions performed by that head,
-# TO_UNDERSTAND: could it be that they are computing the clustering metrics
-# the question is why are we calculating accuracy of clusters in here??
-# i don't understand to be honest
-# why do we heave the second head of unlabeled data in here???
-# i am not sure but he is computing this to see how much is labeled data are clustered well.
-# the idea is that there is no loss here punishing for the bad clustering. it doesn't affect the training.
-# why not just put 1 head in here instead of 2????i don't know
+            wandb.log({"epoch": epoch, "Total_average_loss": loss_record.avg,
+                       "Head_1_training_accuracy": accuracy_record.avg,
+                       "cluster_acc_Head_1": acc_H1, "nmi_Head_1": nmi_H1, "ari_Head_1": ari_H1,
+                       "testing_acc_Head_1": acc_testing_H1,
+                       "lr": exp_lr_scheduler.get_last_lr()[0]}, step=epoch)
 
 
 def test(model, test_loader, args):
@@ -96,7 +88,7 @@ def test(model, test_loader, args):
     # Instantiate two numpy arrays, one for predictions and oen for targets
     preds = np.array([])
     targets = np.array([])
-    acc_record = AverageMeter() # track the accuracy of the first head
+    acc_record = AverageMeter()  # track the accuracy of the first head
 
     # Iterate for each batch in the dataloader
     for batch_idx, (x, label, _) in enumerate(tqdm(test_loader)):
@@ -120,14 +112,15 @@ def test(model, test_loader, args):
         # Here we are not interested in the value, so we put '_' for the first term. We are interested in the second
         # term, which is the index of that value, since the index is equal to the predicted class for that input sample.
         _, pred = output.max(1)
-        acc_testing = accuracy(output, label) # calculating the accuracy
-        acc_record.update(acc_testing[0].item(),x.size(0))
+        acc_testing = accuracy(output, label)  # calculating the accuracy
+        acc_record.update(acc_testing[0].item(), x.size(0))
         # Convert tensor to numpy using 'label.cpu.numpy', then append the value in the respective numpy array
         targets = np.append(targets, label.cpu().numpy())
         preds = np.append(preds, pred.cpu().numpy())
 
     # Compute the accuracy metrics for the current test step
-    acc, nmi, ari = cluster_acc(targets.astype(int), preds.astype(int)), nmi_score(targets, preds), ari_score(targets, preds)
+    acc, nmi, ari = cluster_acc(targets.astype(int), preds.astype(int)), nmi_score(targets, preds), ari_score(targets,
+                                                                                                              preds)
     # The used metrics are:
     # -----------------------------------------------------------------------------------------------------------------
     # 1) CLUSTER ACCURACY (cluster_acc), it is a function written in utils.py files
@@ -168,12 +161,13 @@ def test(model, test_loader, args):
     # -----------------------------------------------------------------------------------------------------------------
 
     # Print the result of the testing procedure obtained computing the three metrics above
-    print('Test cluster acc {:.4f}, nmi {:.4f}, ari {:.4f}, test accuracy {:.4f}'.format(acc, nmi, ari,acc_record.avg))
-    return acc, nmi,ari,acc_record.avg
+    print('Test cluster acc {:.4f}, nmi {:.4f}, ari {:.4f}, test accuracy {:.4f}'.format(acc, nmi, ari, acc_record.avg))
+    return acc, nmi, ari, acc_record.avg
 
 
 if __name__ == "__main__":
     import argparse
+
     # Initialize the ArgumentParser
     parser = argparse.ArgumentParser(description='cluster', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     # Get all the needed input arguments
@@ -188,28 +182,30 @@ if __name__ == "__main__":
     parser.add_argument('--num_labeled_classes', default=5, type=int)  # Number of labeled classes
     parser.add_argument('--dataset_root', type=str, default='./data/datasets/CIFAR/')  # Dataset root directory
     parser.add_argument('--exp_root', type=str, default='./data/experiments/')  # Directory to save the resulting files
-    parser.add_argument('--rotnet_dir', type=str, default='./data/experiments/selfsupervised_learning/rotnet_cifar10.pth')  # Directory to find the semi-supervised pretrained model
+    parser.add_argument('--rotnet_dir', type=str,
+                        default='./data/experiments/selfsupervised_learning/rotnet_cifar10.pth')  # Directory to find the semi-supervised pretrained model
     parser.add_argument('--model_name', type=str, default='resnet_rotnet')  # Name of the model
-    parser.add_argument('--dataset_name', type=str, default='cifar10', help='options: cifar10, cifar100, svhn')  # Name of the used dataset
+    parser.add_argument('--dataset_name', type=str, default='cifar10',
+                        help='options: cifar10, cifar100, svhn')  # Name of the used dataset
     parser.add_argument('--mode', type=str, default='train')  # Mode: train or test
     # Extract the args and make them available in the args object
     args = parser.parse_args()
     logging_on = True
     if logging_on:
-        wandb.login() #4619e908b2f2c21261030dae4c66556d4f1f3178
+        wandb.login()  # 4619e908b2f2c21261030dae4c66556d4f1f3178
         config = {
-        "learning_rate":args.lr,
-        "batch_size":args.batch_size,
-        "dataset":args.dataset_name,
-        "unlabled_classes":args.num_unlabeled_classes,
-        "labled_classes" :args.num_labeled_classes,
-        "momentum":args.momentum,
-        "weight_decay":args.weight_decay,
-        "epochs":args.epochs,
-        "step_size":args.step_size,
-        "mode":args.mode
+            "learning_rate": args.lr,
+            "batch_size": args.batch_size,
+            "dataset": args.dataset_name,
+            "unlabled_classes": args.num_unlabeled_classes,
+            "labled_classes": args.num_labeled_classes,
+            "momentum": args.momentum,
+            "weight_decay": args.weight_decay,
+            "epochs": args.epochs,
+            "step_size": args.step_size,
+            "mode": args.mode
         }
-        wandb.init(project="trends_project", entity="mhaggag96", config = config, save_code = True)
+        wandb.init(project="trends_project", entity="mhaggag96", config=config, save_code=True)
     # Define if cuda can be used and initialize the device used by torch
     args.cuda = torch.cuda.is_available()
     device = torch.device("cuda" if args.cuda else "cpu")
@@ -223,52 +219,64 @@ if __name__ == "__main__":
         os.makedirs(model_dir)
     # Define the name of the path to save the trained model
 
-    args.model_dir = model_dir+'/'+'{}.pth'.format(args.model_name)
+    args.model_dir = model_dir + '/' + '{}.pth'.format(args.model_name)
     '''
     Changing the New_SSL_methods will turn you from the normal rot net to 
     using other self supervised learning methods
     '''
     New_SSL_methods = True
-    New_Resnet_config=True
+    New_Resnet_config = True
     # model = resnet_sim(args.num_labeled_classes, args.num_unlabeled_classes).to(device)
 
-    
     if New_SSL_methods:
         model = resnet_sim(args.num_labeled_classes, args.num_unlabeled_classes).to(device)
         '''
         I am using barlow twins pre loading. you can use different kind of weights
         '''
-        ssl='swav'
-        print("We are working with this self learning method "+ssl)
-        if ssl =='Barlow_twins':
+        ssl = 'swav'
+        print("We are working with this self learning method " + ssl)
+        if ssl == 'Barlow_twins':
             # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py   --dataset_name cifar10 --model_name resnet_rotnet_cifar10_Barlow_twins_2
-            state_dict = torch.load('trained_models/cifar10/barlow_twins/barlow-cifar10-otu5cw89-ep=999.ckpt', map_location="cpu")["state_dict"]
+            state_dict = \
+            torch.load('trained_models/cifar10/barlow_twins/barlow-cifar10-otu5cw89-ep=999.ckpt', map_location="cpu")[
+                "state_dict"]
         elif ssl == 'simsiam':
             # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py   --dataset_name cifar10 --model_name resnet_rotnet_cifar10_simsam
-            state_dict = torch.load('trained_models/cifar10/simsiam/simsiam-cifar10-252e1tvw-ep=999.ckpt', map_location="cpu")["state_dict"]
+            state_dict = \
+            torch.load('trained_models/cifar10/simsiam/simsiam-cifar10-252e1tvw-ep=999.ckpt', map_location="cpu")[
+                "state_dict"]
         elif ssl == 'supcon':
             # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py   --dataset_name cifar10 --model_name resnet_rotnet_cifar10_supcon
-            state_dict = torch.load('trained_models/cifar10/supcon/supcon-cifar10-1w8chdt4-ep=999.ckpt', map_location="cpu")["state_dict"]
+            state_dict = \
+            torch.load('trained_models/cifar10/supcon/supcon-cifar10-1w8chdt4-ep=999.ckpt', map_location="cpu")[
+                "state_dict"]
         elif ssl == 'swav':
             # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py   --dataset_name cifar10 --model_name resnet_rotnet_cifar10_swav
-            state_dict = torch.load('trained_models/cifar10/swav/swav-2rwotcpy-ep=999.ckpt', map_location="cpu")["state_dict"]
+            state_dict = torch.load('trained_models/cifar10/swav/swav-2rwotcpy-ep=999.ckpt', map_location="cpu")[
+                "state_dict"]
         elif ssl == 'vibcreg':
             # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py   --dataset_name cifar10 --model_name resnet_rotnet_cifar10_vibcreg
-            state_dict = torch.load('trained_models/cifar10/vibcreg/vibcreg-cifar10-3ehq2v3f-ep=999.ckpt', map_location="cpu")["state_dict"]
+            state_dict = \
+            torch.load('trained_models/cifar10/vibcreg/vibcreg-cifar10-3ehq2v3f-ep=999.ckpt', map_location="cpu")[
+                "state_dict"]
         elif ssl == 'vicreg':
             # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py   --dataset_name cifar10 --model_name resnet_rotnet_cifar10_vicreg
-            state_dict = torch.load('trained_models/cifar10/vicreg/vicreg-cifar10-qx5zahvt-ep=999.ckpt', map_location="cpu")["state_dict"]
+            state_dict = \
+            torch.load('trained_models/cifar10/vicreg/vicreg-cifar10-qx5zahvt-ep=999.ckpt', map_location="cpu")[
+                "state_dict"]
         elif ssl == 'wmse':
             # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py   --dataset_name cifar10 --model_name resnet_rotnet_cifar10_wmse
-            state_dict = torch.load('trained_models/cifar10/wmse/wmse-cifar10-6z3m2p9o-ep=999.ckpt', map_location="cpu")["state_dict"]
+            state_dict = \
+            torch.load('trained_models/cifar10/wmse/wmse-cifar10-6z3m2p9o-ep=999.ckpt', map_location="cpu")[
+                "state_dict"]
         for k in list(state_dict.keys()):
-                if "encoder" in k:
-                        state_dict[k.replace("encoder", "backbone")] = state_dict[k]
-                if "backbone" in k:
-                        state_dict['encoder.'+k.replace("backbone.", "")] = state_dict[k]      
-                del state_dict[k]
+            if "encoder" in k:
+                state_dict[k.replace("encoder", "backbone")] = state_dict[k]
+            if "backbone" in k:
+                state_dict['encoder.' + k.replace("backbone.", "")] = state_dict[k]
+            del state_dict[k]
     else:
-    #    Initialize ResNet architecture and also the BasicBlock, which are imported from resnet.py. Then send to cuda
+        #    Initialize ResNet architecture and also the BasicBlock, which are imported from resnet.py. Then send to cuda
         if New_Resnet_config:
             # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py --rotnet_dir ./data/experiments/selfsupervised_learning/rotnet_cifar10_new_config.pth  --dataset_name cifar10 --model_name resnet_rotnet_cifar10_new_config
             model = resnet_sim(args.num_labeled_classes, args.num_unlabeled_classes).to(device)
@@ -290,7 +298,7 @@ if __name__ == "__main__":
         # Apply the loaded weights to the model, we do not strictly enforce that the keys in state_dict match since the old
         # model has one head that was removed, while the new model has two new heads. Therefore, hey cannot fully match
     model.load_state_dict(state_dict, strict=False)
-      
+
     # # Compute the total number of classes
     # # Iterate through all the parameters of the new model
     for name, param in model.named_parameters():
