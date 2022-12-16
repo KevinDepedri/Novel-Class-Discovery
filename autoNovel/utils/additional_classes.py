@@ -116,41 +116,50 @@ class t_SNE(object):
         self.feature_label_dataframe = None
 
         # # Computation of t-SNE and full dataframe with labels, t-sne and features
-        self.time_start = None
+        self.num_classes = None
         self.tsne = None
         self.tsne_results = None
         self.feature_label_tsne_dataframe = None
 
-    def get_feature_label_dataframe(self):
+    def get_feature_label_dataframe(self, print_df=False):
         assert len(self.feature_vectors_labels) == len(self.feature_vectors), "Number of features and of labels do " \
                                                                               "not correspond"
         self.feature_label_dataframe = self.feature_vectors.copy()
         self.feature_label_dataframe.insert(0, 'Label', self.feature_vectors_labels)
+        if print_df:
+            print(self.feature_label_dataframe)
         return self.feature_label_dataframe
 
-    def compute_and_plot_2d_t_sne(self, n_components=2, verbose=1, perplexity=1, n_iter=300):
-        self.get_feature_label_dataframe()
-        self.time_start = time.time()
-        self.tsne = TSNE(n_components=n_components, verbose=verbose, perplexity=perplexity, n_iter=n_iter)
+    def compute_and_plot_2d_t_sne(self, print_df=False, plot_name='my_plot', verbose=1, perplexity=1, n_iter=300):
+        self.get_feature_label_dataframe(print_df=False)
+
+        time_start = time.time()
+        self.tsne = TSNE(n_components=2, verbose=verbose, perplexity=perplexity, n_iter=n_iter)
         self.tsne_results = self.tsne.fit_transform(self.feature_vectors.values)
-        print('t-SNE done! Time elapsed: {} seconds'.format(time.time()-self.time_start))
+        print('t-SNE done! Time elapsed: {} seconds'.format(time.time()-time_start))
 
         self.feature_label_tsne_dataframe = self.feature_label_dataframe.copy()
+        self.num_classes = len(set(self.feature_label_tsne_dataframe["Label"]))
         self.feature_label_tsne_dataframe.insert(loc=1, column='tsne-d-one', value=self.tsne_results[:, 0])
         self.feature_label_tsne_dataframe.insert(loc=2, column='tsne-d-two', value=self.tsne_results[:, 1])
+        if print_df:
+            print(self.feature_label_tsne_dataframe)
 
         plt.figure(figsize=(16, 10))
         sns.scatterplot(
             x="tsne-d-one", y="tsne-d-two",
             hue="Label",
-            palette=sns.color_palette("flare", 2),
+            palette=sns.color_palette("tab10", self.num_classes),
             data=self.feature_label_tsne_dataframe,
             legend="full",
             alpha=0.3
         )
+        picture_save_path = 'tSNE_plots/' + plot_name + '.png'
+        plt.savefig(picture_save_path)
+        print(f"tSNE plot saved as : {plot_name + '.png'}")
         return self.feature_label_tsne_dataframe
 
     # Used in NN.forward() to push labels in the t-SNE class
     def push_labels(self, labels_list):
         for x in labels_list:
-            self.feature_vectors_labels.append(x)
+            self.feature_vectors_labels.append(x.item())
