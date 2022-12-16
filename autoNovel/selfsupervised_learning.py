@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.optim import lr_scheduler
-from torchvision import transforms,models
+from torchvision import transforms, models
 import pickle
 import os
 import os.path
@@ -16,10 +16,9 @@ from utils.util import AverageMeter, accuracy
 from models.resnet import BasicBlock
 from tqdm import tqdm
 import shutil
-#forlogging
 import wandb
 
-global logging_on 
+global logging_on
 
 '''
 # Self supervised learning (as from section 2.1 of AutoNovel paper) - part 1
@@ -30,19 +29,22 @@ In the paper it is not mention how RotNet is built. In the majority of the case 
 GitHub of the RotNet paper: https://github.com/gidariss/FeatureLearningRotNet
 '''
 
+
 class resnet_sim(nn.Module):
-    def __init__(self,num_labeled_classes=5):
-        super(resnet_sim,self).__init__()
-        self.encoder = models.__dict__['resnet18']()#intializingresnet18 by pytorcch
-        self.encoder.fc = nn.Identity()# replace the fullneceted by an identity
+    def __init__(self, num_labeled_classes=5):
+        super(resnet_sim, self).__init__()
+        self.encoder = models.__dict__['resnet18']()  # Initializing ResNet18 by pytorch
+        self.encoder.fc = nn.Identity()  # Replace the fully connected layer with an identity
         self.encoder.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
-        self.encoder.maxpool = nn.Identity()# I am removign the max pool layer
+        self.encoder.maxpool = nn.Identity()  # Remove the max pool layer
         self.head1 = nn.Linear(512, num_labeled_classes)  # First head: to classify known classes
 
     def forward(self, x):
         out = self.encoder(x)
         out1 = self.head1(out)
         return out1
+
+
 # Initialization of a ResNet architecture built to perform self-supervised learning as RotNet. It has only one output
 # heads with 4 possible output classes. The output classes are the 4 possible rotations (0, 90, 180, 270 degrees)
 class ResNet(nn.Module):
@@ -59,7 +61,7 @@ class ResNet(nn.Module):
         self.layer4 = self._make_layer(block, 512, num_blocks[3], stride=2)
         # Implement a final linear layer to classify between the given classes. This head will be used only to perform
         # this unsupervised classification task (RotNet), and will be removed in the next task (Supervised training)
-        self.linear = nn.Linear(512*block.expansion, num_classes)
+        self.linear = nn.Linear(512 * block.expansion, num_classes)
         # If is_adapters is true then add a parallel_convolution layer
         if is_adapters:  # Not used since adapters is set to 0
             self.parallel_conv1 = nn.Conv2d(3, 64, kernel_size=1, stride=1, bias=False)
@@ -80,7 +82,7 @@ class ResNet(nn.Module):
         # Compute the output of the NN
         # If is adapters is true consider also the parallel convolution in the computation of the output
         if is_adapters:  # TODO:How is is_adapters used and defined??
-            out = F.relu(self.bn1(self.conv1(x)+self.parallel_conv1(x)))
+            out = F.relu(self.bn1(self.conv1(x) + self.parallel_conv1(x)))
         # Otherwise consider just the previous layers
         else:
             out = F.relu(self.bn1(self.conv1(x)))
@@ -93,6 +95,7 @@ class ResNet(nn.Module):
         out = out.view(out.size(0), -1)
         out = self.linear(out)
         return out
+
 
 # Training function of ResNet
 def train(epoch, model, device, dataloader, optimizer, exp_lr_scheduler, criterion, args):
@@ -129,18 +132,18 @@ def train(epoch, model, device, dataloader, optimizer, exp_lr_scheduler, criteri
         loss.backward()
         optimizer.step()
 
-        # Perform a step on the input exp_lr_scheduler (scheduler used to define the learning rate)
-        
-    exp_lr_scheduler.step()  # FIXME: Putting this here to avoid warning, if there are problems move it back above
+    # Perform a step on the input exp_lr_scheduler (scheduler used to define the learning rate)
+    exp_lr_scheduler.step()
+
     # Print the result of the training procedure
     print('Train Epoch: {} Avg Loss: {:.4f} \t Avg Acc: {:.4f}'.format(epoch, loss_record.avg, acc_record.avg))
     if logging_on:
-            wandb.log({"epoch": epoch,"Total_average_loss":loss_record.avg,
-                   "Head_1_training_accuracy":acc_record.avg,
-                   "lr":exp_lr_scheduler.get_last_lr()[0]}, step = epoch)
+        wandb.log({"epoch": epoch, "Total_average_loss": loss_record.avg,
+                   "Head_1_training_accuracy": acc_record.avg, "lr": exp_lr_scheduler.get_last_lr()[0]}, step=epoch)
     return loss_record
 
-def test(model, device, dataloader, epoch,args):
+
+def test(model, device, dataloader, epoch, args):
     # Define an instance of AverageMeter to compute and store the average and current values of the accuracy
     acc_record = AverageMeter()
     # Put the model in evaluation mode
@@ -161,9 +164,9 @@ def test(model, device, dataloader, epoch,args):
     # Print the result of the testing procedure
     print('Test Acc: {:.4f}'.format(acc_record.avg))
     if logging_on:
-            wandb.log({"epoch": epoch,
-                   "Head_1_val_accuracy":acc_record.avg}, step = epoch)
+        wandb.log({"epoch": epoch, "Head_1_val_accuracy": acc_record.avg}, step=epoch)
     return acc_record
+
 
 def main():
     # Initialize the ArgumentParser
@@ -181,7 +184,6 @@ def main():
 
     # Add to the parser the argument: 'seed' with a default value of 1. It is used in the dataloader
     parser.add_argument('--seed', type=int, default=1, help='random seed (default: 1)')
-    # TO_UNDERSTAND: It could be useful in the experiment??
 
     # Add to the parser the argument: 'epochs' with a default value of 200. It is used in the training procedure
     parser.add_argument('--epochs', type=int, default=200, metavar='N', help='number of epochs to train (default: 200)')
@@ -221,31 +223,29 @@ def main():
         os.makedirs(model_dir)
 
     if logging_on:
-        wandb.login() #4619e908b2f2c21261030dae4c66556d4f1f3178
+        wandb.login()  # 4619e908b2f2c21261030dae4c66556d4f1f3178
         config = {
-        "learning_rate":args.lr,
-        "batch_size":args.batch_size,
-        "dataset":args.dataset_name,
-        "momentum":args.momentum,
-        "epochs":args.epochs,
+            "learning_rate": args.lr,
+            "batch_size": args.batch_size,
+            "dataset": args.dataset_name,
+            "momentum": args.momentum,
+            "epochs": args.epochs,
         }
-        wandb.init(project="trends_project", entity="mhaggag96", config = config, save_code = True)
+        wandb.init(project="trends_project", entity="mhaggag96", config=config, save_code=True)
     # Define the name of the path to save the trained model
-    args.model_dir = model_dir+'/'+'{}.pth'.format(args.model_name)
-    # FIXME: the saved model should be rotnet.pth but why when I open I see rotnet_cifar10 ??? See GitHub, probably
-    # FIXME: because the previous model has been saved using a different name, until we run all the code we can't know
+    args.model_dir = model_dir + '/' + '{}.pth'.format(args.model_name)
 
     # Create a torch dataset for the train and test data. Full comments available in the rotation loader section
     dataset_train = GenericDataset(
         dataset_name=args.dataset_name,
         split='train',
         dataset_root=args.dataset_root
-       )
+    )
     dataset_test = GenericDataset(
         dataset_name=args.dataset_name,
         split='test',
         dataset_root=args.dataset_root
-        )
+    )
 
     # Create a torch dataloader for the train and test data. Full comments available in the rotation loader section
     dloader_train = DataLoader(
@@ -294,7 +294,7 @@ def main():
         # Compute the loss of the training step
         loss_record = train(epoch, model, device, dloader_train, optimizer, exp_lr_scheduler, criterion, args)
         # Compute the accuracy of the testing step
-        acc_record = test(model, device, dloader_test,epoch, args)
+        acc_record = test(model, device, dloader_test, epoch, args)
 
         # Compare the average accuracy saved in the AverageMeter object with the best accuracy measured up to now
         is_best = acc_record.avg > best_acc
@@ -305,6 +305,7 @@ def main():
             torch.save(model.state_dict(), args.model_dir)
     if logging_on:
         wandb.finish()
+
 
 # If the name variable is equal to __main__ then run the main function and start the training and testing procedure.
 if __name__ == '__main__':
