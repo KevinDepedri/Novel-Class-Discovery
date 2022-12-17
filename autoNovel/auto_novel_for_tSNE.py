@@ -372,17 +372,21 @@ def test(model, test_loader, plot_name, args):
         targets = np.append(targets, label.cpu().numpy())
         preds = np.append(preds, pred.cpu().numpy())
 
-    pd.options.display.width = 1000
-    feature_label_dataframe = model.get_feature_label_dataframe(print_df=True)
-    feature_label_tsne_dataframe = model.compute_and_plot_2d_t_sne(print_df=True,
-                                                                   plot_name=str('tSNE_'+args.head+'_'+plot_name),
-                                                                   verbose=1, perplexity=40, n_iter=300)
+    # Get the feature label dataframe
+    model.get_feature_label_dataframe(print_df=True)
+    
+    # Define the name of the plot
+    partial_plot_path = str('tSNE_plots/' + args.model_name)
+    full_plot_path = str(partial_plot_path + '/' + 'tSNE_' + args.head + '_' + plot_name + '.png')
+    # Get the feature label tSNE dataframe and save the tSNE plot in the given directory
+    model.compute_and_plot_2d_t_sne(print_df=True, plot_path=full_plot_path, verbose=1, perplexity=40, n_iter=300)
+
+    # Initialize the tSNE module for the next plot with the current model
     model.__init_tsne__()
 
     # Compute the accuracy metrics for the current test step, see supervised_learning.py for full explanation
     acc, nmi, ari = cluster_acc(targets.astype(int), preds.astype(int)), nmi_score(targets, preds), ari_score(targets,
                                                                                                               preds)
-
     print('Test cluster acc {:.4f}, nmi {:.4f}, ari {:.4f}, test accuracy {:.4f}'.format(acc, nmi, ari, acc_record.avg))
     return acc, nmi, ari, acc_record.avg
 
@@ -409,11 +413,11 @@ if __name__ == "__main__":
     parser.add_argument('--exp_root', type=str, default='./data/experiments/')  # Directory to save the resulting files
     parser.add_argument('--warmup_model_dir', type=str, default='./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth')  # Directory to find the supervised pretrained model
     parser.add_argument('--topk', default=5, type=int)  # Number of top elements that we want to compare
-    parser.add_argument('--IL', action='store_true', default=False, help='w/ incremental learning')  # Enable/Disable IL
-    parser.add_argument('--model_name', type=str, default='resnet')  # Name of the model
+    parser.add_argument('--IL', action='store_true', default=True, help='w/ incremental learning')  # Enable/Disable IL
+    parser.add_argument('--model_name', type=str, default='resnet_IL_cifar10')  # Name of the model
     parser.add_argument('--dataset_name', type=str, default='cifar10', help='options: cifar10, cifar100, svhn')  # Name of the used dataset
     parser.add_argument('--seed', default=1, type=int)  # Seed to use
-    parser.add_argument('--mode', type=str, default='train')  # Mode: train or test
+    parser.add_argument('--mode', type=str, default='test')  # Mode: train or test
     logging_on = False  # Variable to stop logging when we do not want to log anything
 
     # Extract the args and make them available in the args object
@@ -433,21 +437,31 @@ if __name__ == "__main__":
     # Define the name of the path to save the trained model
     args.model_dir = model_dir + '/' + '{}.pth'.format(args.model_name)
 
+    # Build a new directory for the tSNE plots of the current tested model
+    partial_plot_path = str('tSNE_plots/' + args.model_name)
+    if not os.path.exists(partial_plot_path):
+        os.makedirs(partial_plot_path)
+
+    # Choose which ResNet architecture we want to run
     New_resnet = False
-    # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_Barlow_twins_2.pth resnet_IL_cifar10_Barlow_twins_2
     if New_resnet:
-        # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_new_config.pth resnet_IL_cifar10_new_config
+        # Initialize the New ResNet architecture (original resnet no changes) and also the BasicBlock. Then send cuda
         model = resnet_sim(args.num_labeled_classes, args.num_unlabeled_classes).to(device)
-        # another run
-        # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_simsam_2.pth resnet_IL_cifar10_simsam_2
+        # TODO: Write the correct options here
+        # Use one of the following command lines from console to run the old architecture with the selected SSL:
+        # Use the following command line from console to run the old architecture:# CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10_tSNE.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_Barlow_twins_2.pth resnet_IL_cifar10_Barlow_twins_2
+        # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10_tSNE.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_new_config.pth resnet_IL_cifar10_new_config
+        # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10_tSNE.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_simsam_2.pth resnet_IL_cifar10_simsam_2
 
     else:
-        # Initialize ResNet architecture and also the BasicBlock, which are imported from resnet.py. Then send to cuda
-        # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_basicconfig.pth resnet_IL_cifar10_basic_config
+        # Initialize the old ResNet architecture (changed from the authors) and also the BasicBlock. Then Send cuda
         model = ResNet(BasicBlock, [2, 2, 2, 2], args.num_labeled_classes, args.num_unlabeled_classes).to(device)
+        # TODO: Write the correct option here
+        # Use the following command line from console to run the old architecture:
+        # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10_tSNE.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_basicconfig.pth resnet_IL_cifar10_basic_config
+
     # Default inputs assume that we are working with 10 classes of which: 5 classes unlabeled 5 classes labeled.
     # We have two heads in this ResNet model, head1 for the labeled and head2 for the unlabeled data.
-
     # Compute the total number of classes
     num_classes = args.num_labeled_classes + args.num_unlabeled_classes
     # to login into wandb this is the password
@@ -493,7 +507,8 @@ if __name__ == "__main__":
         # possible to specify how many samples we want to be removed. They will be removed randomly in that class.
         unbalanced = False
         if unbalanced:
-            sample_per_class_to_remove_dictionary = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0}
+            sample_per_class_to_remove_dictionary = {0: 100, 1: 200, 2: 300, 3: 400, 4: 500, 5: 100, 6: 200, 7: 300,
+                                                     8: 400, 9: 500}
         else:
             sample_per_class_to_remove_dictionary = None
 
@@ -501,38 +516,37 @@ if __name__ == "__main__":
         # It is in format of ((picture1,picture2),label,index) where picture 1 is the original example, picture 2 is
         # the augmentation of the original example, label is the label for both the samples and index is the position
         # of that specific example in the original dataset
-        # TODO: Implement also here the possibility to remove samples
         mix_train_loader = CIFAR10LoaderMix(root=args.dataset_root, batch_size=args.batch_size, split='train',
                                             aug='twice', shuffle=True, labeled_list=range(args.num_labeled_classes),
                                             unlabeled_list=range(args.num_labeled_classes, num_classes),
-                                            remove_dict=sample_per_class_to_remove_dictionary)
+                                            remove_dict=sample_per_class_to_remove_dictionary, download=False)
 
         # Loader never used
         labeled_train_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='train',
                                              aug='once', shuffle=True, target_list=range(args.num_labeled_classes),
-                                             remove_dict=sample_per_class_to_remove_dictionary)
+                                             remove_dict=sample_per_class_to_remove_dictionary, download=False)
 
-        # 4 - Unlabeled loader only, used for the evaluation over unlabeled samples
+        # Unlabeled loader only, used for the evaluation over unlabeled samples - Used in test-phase4
         unlabeled_eval_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='train',
                                               aug=None, shuffle=False,
                                               target_list=range(args.num_labeled_classes, num_classes),
-                                              remove_dict=sample_per_class_to_remove_dictionary)
+                                              remove_dict=sample_per_class_to_remove_dictionary, download=False)
 
-        # 2 - 5 unlabeled evaluation set
+        # unlabeled evaluation set - Used in test-phase2 and phase5
         unlabeled_eval_loader_test = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='test',
                                                    aug=None, shuffle=False,
                                                    target_list=range(args.num_labeled_classes, num_classes),
-                                                   remove_dict=sample_per_class_to_remove_dictionary)
+                                                   remove_dict=sample_per_class_to_remove_dictionary, download=False)
 
-        # 1 - Labeled loader only, used for the evaluation over labeled samples
+        # Labeled loader only, used for the evaluation over labeled samples - Used in test-phase1
         labeled_eval_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='test',
                                             aug=None, shuffle=False, target_list=range(args.num_labeled_classes),
-                                            remove_dict=sample_per_class_to_remove_dictionary)
+                                            remove_dict=sample_per_class_to_remove_dictionary, download=False)
 
-        # 3 - labeled test set, contains both labeled and unlabeled
+        # labeled test set, contains both labeled and unlabeled - Used in test-phase3
         all_eval_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='test',
                                         aug=None, shuffle=False, target_list=range(num_classes),
-                                        remove_dict=sample_per_class_to_remove_dictionary)
+                                        remove_dict=sample_per_class_to_remove_dictionary, download=False)
 
     # Otherwise, the dataset argument is 'cifar100' then use its apposite loader, see comments above on cifar10
     elif args.dataset_name == 'cifar100':
@@ -605,7 +619,7 @@ if __name__ == "__main__":
         if args.IL:
             model.head1 = nn.Linear(512, num_classes).to(device)
         # Load the model from the specified path
-        model.load_state_dict(torch.load(args.model_dir))
+        model.load_state_dict(torch.load(args.model_dir, map_location=torch.device(device)))  # TODO: remove map_location=torch.device if problem arises on colab
 
     # In the end, first test the model using head1 over the labeled dataloader
     print('\n\n\nEVALUATING ON HEAD1')
