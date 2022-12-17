@@ -12,9 +12,12 @@ else:
 import random
 import torch
 import torch.utils.data as data
-from .utils import download_url, check_integrity
-from .utils import TransformTwice, TransformKtimes, RandomTranslateWithReflect, TwoStreamBatchSampler
-from .concat import ConcatDataset
+# from .utils import download_url, check_integrity
+# from .utils import TransformTwice, TransformKtimes, RandomTranslateWithReflect, TwoStreamBatchSampler
+# from .concat import ConcatDataset
+from data.utils import download_url, check_integrity
+from data.utils import TransformTwice, TransformKtimes, RandomTranslateWithReflect, TwoStreamBatchSampler
+from data.concat import ConcatDataset
 import torchvision.transforms as transforms
 from utils.additional_classes import CustomCIFAR10
 
@@ -208,8 +211,8 @@ class CIFAR10(data.Dataset):# this is class dataset
         fmt_str += '{0}{1}'.format(tmp, self.target_transform.__repr__().replace('\n', '\n' + ' ' * len(tmp)))
         return fmt_str
 
-
-def CIFAR10Data(root, split='train', aug=None, target_list=range(5), remove_dict: dict = None, remove_lst: list = None):
+def CIFAR10Data(root, split='train', aug=None, target_list=range(5), download=False,
+                remove_dict: dict = None, remove_lst: list = None):
     # If we have no augmentation just transform to tensor and normalize
     if aug == None:
         transform = transforms.Compose([
@@ -251,25 +254,26 @@ def CIFAR10Data(root, split='train', aug=None, target_list=range(5), remove_dict
     # OLD LINE
     # dataset = CIFAR10(root=root, split=split, transform=transform, target_list=target_list)
     # NEW LINE
-    dataset = CustomCIFAR10(root=root, split=split, transform=transform, target_list=target_list,
+    dataset = CustomCIFAR10(root=root, split=split, transform=transform, target_list=target_list, download=download,
                             remove_dict=remove_dict, remove_lst=remove_lst)
 
     return dataset
 
 # Used in supervised_learning.py and auto_novel.py
 def CIFAR10Loader(root, batch_size, split='train',  aug=None, shuffle=True, target_list=range(5), num_workers=2,
-                  remove_dict: dict = None, remove_lst: list = None):
+                  download=False, remove_dict: dict = None, remove_lst: list = None):
     # Called in supervised learning, target_list contains range with the indexes for the labeled classes.
     # In the paper target_list=range(5), in this way the classes with labels will be [0,1,2,3,4]
-
     # Instantiate the dataset (for supervised learning case the augmentation parameter is set to 'once')
-    dataset = CIFAR10Data(root, split, aug, target_list, remove_dict, remove_lst)
+    dataset = CIFAR10Data(root, split, aug, target_list, download, remove_dict, remove_lst)
     # Define the dataloader with the given parameters and return it
     loader = data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     return loader
 
 # Used only in auto_novel.py
-def CIFAR10LoaderMix(root, batch_size, split='train', num_workers=2, aug=None, shuffle=True, labeled_list=range(5), unlabeled_list=range(5, 10), new_labels=None):
+def CIFAR10LoaderMix(root, batch_size, split='train', num_workers=2, aug=None, shuffle=True, labeled_list=range(5),
+                     unlabeled_list=range(5, 10), new_labels=None, download=False,
+                     remove_dict: dict = None, remove_lst: list = None):
     # First choose the type of augmentation between none, once and twice
     if aug==None:
         transform = transforms.Compose([
@@ -297,14 +301,24 @@ def CIFAR10LoaderMix(root, batch_size, split='train', num_workers=2, aug=None, s
         ]))
 
     # Define a labeled dataset calling the CIFAR10 class, we pass target_list=labeled_list to choose the first 5 classes
-    dataset_labeled = CIFAR10(root=root, split=split, transform=transform, target_list=labeled_list)
+    # OLD LINE
+    # dataset_labeled = CIFAR10(root=root, split=split, transform=transform, target_list=labeled_list)
+    # NEW LINE
+    dataset_labeled = CustomCIFAR10(root=root, split=split, transform=transform, target_list=labeled_list,
+                                    download=download, remove_dict=remove_dict, remove_lst=remove_lst)
+
+
     # Each dataset_labeled[i] is a tuple containing 3 things:
     # - A tuple containing 2 tensor of (3,32,32) which are the original image and its augmentation
     # - A class label as an integer
     # - The index of the picture in the original dataset (CIFAR10)
 
     # Define an unlabeled dataset calling the CIFAR10 class, target_list=unlabeled_list to choose the last 5 classes
-    dataset_unlabeled = CIFAR10(root=root, split=split, transform=transform, target_list=unlabeled_list)
+    # OLD LINE
+    # dataset_unlabeled = CIFAR10(root=root, split=split, transform=transform, target_list=unlabeled_list)
+    # NEW LINE
+    dataset_unlabeled = CustomCIFAR10(root=root, split=split, transform=transform, target_list=unlabeled_list,
+                                      download=download, remove_dict=remove_dict, remove_lst=remove_lst)
 
     # If we have some addition input labels they are applied and used as targets
     if new_labels is not None:
@@ -410,3 +424,58 @@ def CIFAR100LoaderTwoStream(root, batch_size, split='train',num_workers=2, aug=N
     loader.labeled_length = len(dataset_labeled)
     loader.unlabeled_length = len(dataset_unlabeled)
     return loader
+
+
+if __name__ == "__main__":
+    import argparse
+
+    # Initialize the ArgumentParser
+    parser = argparse.ArgumentParser(description='cluster', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    # Get all the needed input arguments
+    parser.add_argument('--lr', type=float, default=0.1)  # Learning rate of optimizer
+    parser.add_argument('--gamma', type=float, default=0.1)  # Gamma of the learning rate scheduler
+    parser.add_argument('--momentum', type=float, default=0.9)  # Momentum term of optimizer
+    parser.add_argument('--weight_decay', type=float, default=1e-4)  # Weight decay of optimizer
+    parser.add_argument('--epochs', default=200, type=int)  # Number of epochs
+    parser.add_argument('--rampup_length', default=150, type=int)  # Ramp-up length passed to ramps.py function
+    parser.add_argument('--rampup_coefficient', type=float, default=50)  # Ramp-up coefficient
+    parser.add_argument('--increment_coefficient', type=float, default=0.05)  # Incremental learning coefficient
+    parser.add_argument('--step_size', default=170, type=int)  # Step size of learning rate scheduler
+    parser.add_argument('--batch_size', default=128, type=int)  # Batch size
+    parser.add_argument('--num_unlabeled_classes', default=5, type=int)  # Number of unlabeled classes
+    parser.add_argument('--num_labeled_classes', default=5, type=int)  # Number of labeled classes
+    parser.add_argument('--dataset_root', type=str, default='./data/datasets/CIFAR/')  # Dataset root directory
+    parser.add_argument('--exp_root', type=str,
+                        default='./data/experiments/')  # Directory to save the resulting files
+    parser.add_argument('--warmup_model_dir', type=str,
+                        default='./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth')  # Directory to find the supervised pretrained model
+    parser.add_argument('--topk', default=5, type=int)  # Number of top elements that we want to compare
+    parser.add_argument('--IL', action='store_true', default=False,
+                        help='w/ incremental learning')  # Enable/Disable IL
+    parser.add_argument('--model_name', type=str, default='resnet')  # Name of the model
+    parser.add_argument('--dataset_name', type=str, default='cifar10',
+                        help='options: cifar10, cifar100, svhn')  # Name of the used dataset
+    parser.add_argument('--seed', default=1, type=int)  # Seed to use
+    parser.add_argument('--mode', type=str, default='train')  # Mode: train or test
+    logging_on = False  # Variable to stop logging when we do not want to log anything
+
+    # Extract the args and make them available in the args object
+    args = parser.parse_args()
+    # Define if cuda can be used and initialize the device used by torch. Furthermore, specify the torch seed
+    args.cuda = torch.cuda.is_available()
+    device = torch.device("cuda" if args.cuda else "cpu")
+    seed_torch(args.seed)
+
+    # Remove all from here
+    print("BUILD CUSTOM DATASET")
+    unbalanced = False
+    if unbalanced:
+        sample_per_class_to_remove_dictionary = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0, 8: 0, 9: 0}
+    else:
+        sample_per_class_to_remove_dictionary = None
+
+    labeled_eval_loader = CIFAR10Loader(root=args.dataset_root, batch_size=args.batch_size, split='test',
+                                        aug=None, shuffle=False, target_list=range(args.num_labeled_classes),
+                                        remove_dict=sample_per_class_to_remove_dictionary)
+    print("CUSTOM DATASET BUILT")
+    # to here
