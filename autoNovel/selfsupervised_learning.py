@@ -12,11 +12,14 @@ import os.path
 import datetime
 import numpy as np
 from data.rotationloader import DataLoader, GenericDataset
-from utils.util import AverageMeter, accuracy
+from data.rotation_loader_mnisit import DataLoader_mnisit, GenericDataset_mnisit
+
+from utils.util import AverageMeter, accuracy,seed_torch
 from models.resnet import BasicBlock
 from tqdm import tqdm
 import shutil
 import wandb
+from torch.utils.data import ConcatDataset
 
 global logging_on
 
@@ -212,7 +215,8 @@ def main():
     # Define if cuda can be used and initialize the device used by torch. Furthermore, specify the torch seed
     use_cuda = not args.no_cuda and torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
-    torch.manual_seed(args.seed)
+    # torch.manual_seed(args.seed)
+    seed_torch(args.seed)
 
     # Returns the current file name. In this case file is called selfsupervised_learning.py
     runner_name = os.path.basename(__file__).split(".")[0]
@@ -234,31 +238,49 @@ def main():
         wandb.init(project="trends_project", entity="mhaggag96", config=config, save_code=True)
     # Define the name of the path to save the trained model
     args.model_dir = model_dir + '/' + '{}.pth'.format(args.model_name)
-
+    if (args.dataset_name=="mnisit"):
+        # CUDA_VISIBLE_DEVICES=0 python selfsupervised_learning.py --dataset_name mnisit --model_name rotnet_mnisit_MIXMIX 
+        dataset_name_1=GenericDataset_mnisit('mnisit',split='train')
+        dataset_name_2=GenericDataset_mnisit('mnisitm',split='train')
+        dataset = ConcatDataset([dataset_name_1,dataset_name_2])
+        dloader_train = DataLoader_mnisit(
+            dataset=dataset,
+            batch_size=args.batch_size,
+            num_workers=args.num_workers,
+            shuffle=True)
+        dataset_name_1=GenericDataset_mnisit('mnisit',split='test')
+        dataset_name_2=GenericDataset_mnisit('mnisitm',split='test')
+        dataset = ConcatDataset([dataset_name_1,dataset_name_2])
+        dloader_test = DataLoader_mnisit(
+            dataset=dataset,
+            batch_size=args.batch_size,
+            num_workers=args.num_workers,
+            shuffle=True)
+    else:
     # Create a torch dataset for the train and test data. Full comments available in the rotation loader section
-    dataset_train = GenericDataset(
-        dataset_name=args.dataset_name,
-        split='train',
-        dataset_root=args.dataset_root
-    )
-    dataset_test = GenericDataset(
-        dataset_name=args.dataset_name,
-        split='test',
-        dataset_root=args.dataset_root
-    )
+        dataset_train = GenericDataset(
+            dataset_name=args.dataset_name,
+            split='train',
+            dataset_root=args.dataset_root
+        )
+        dataset_test = GenericDataset(
+            dataset_name=args.dataset_name,
+            split='test',
+            dataset_root=args.dataset_root
+        )
 
-    # Create a torch dataloader for the train and test data. Full comments available in the rotation loader section
-    dloader_train = DataLoader(
-        dataset=dataset_train,
-        batch_size=args.batch_size,
-        num_workers=args.num_workers,
-        shuffle=True)
+        # Create a torch dataloader for the train and test data. Full comments available in the rotation loader section
+        dloader_train = DataLoader(
+            dataset=dataset_train,
+            batch_size=args.batch_size,
+            num_workers=args.num_workers,
+            shuffle=True)
 
-    dloader_test = DataLoader(
-        dataset=dataset_test,
-        batch_size=args.batch_size,
-        num_workers=args.num_workers,
-        shuffle=False)
+        dloader_test = DataLoader(
+            dataset=dataset_test,
+            batch_size=args.batch_size,
+            num_workers=args.num_workers,
+            shuffle=False)
 
     # Define a global variable is_adapters. It is initialized with a value of zero by default.
     global is_adapters  # TODO: Does anyone know what is the use of this??? what happens if I change its value ????
@@ -268,14 +290,14 @@ def main():
     # This NN will be used to predict the rotation of the examples coming from the dataloader, for this reason the
     # number of classes will be 4, for the four possible rotation (0, 90, 180, 270 degrees)
     # The ResNet architecture is the one described above, while the BasicBlock is imported from resnet.py
-    normal_model = False
+    normal_model = True
     if normal_model:
         model = ResNet(BasicBlock, [2, 2, 2, 2], num_classes=4)
     else:
         model = resnet_sim(num_labeled_classes=4)
     # Send the model to the device
     model = model.to(device)
-    print(model)
+    # print(model)
     # Instantiate SGD optimizer with input learning rate and momentum, and with pre-define weight_decay and Nesterov
     optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=5e-4, nesterov=True)
 

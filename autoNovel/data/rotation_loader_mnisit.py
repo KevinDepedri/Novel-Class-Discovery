@@ -9,8 +9,8 @@ import torch.utils.data as data
 from torch.utils.data.dataloader import default_collate
 import torchnet as tnt
 
-from Mnisit_M_loading import MNISTM
-from Mnisit_loading import MNIST_DS
+from .Mnisit_M_loading import MNISTM
+from .Mnisit_loading import MNIST_DS
 import numpy as np 
 import random
 import matplotlib.pyplot as plt
@@ -87,7 +87,7 @@ class GenericDataset_mnisit(data.Dataset):
 
     def __len__(self):
         return len(self.data)
-class DataLoader(object):
+class DataLoader_mnisit(object):
     def __init__(self,
                  dataset,
                  batch_size=1,
@@ -179,15 +179,15 @@ def seed_torch(seed=1029):
     torch.backends.cudnn.deterministic = True
 if __name__ == '__main__':
     seed_torch(1)
-    dataset_name_1=GenericDataset_mnisit('mnisit',split='train')
+    dataset_name_1=GenericDataset_mnisit('mnisit',split='test')
     print((dataset_name_1[0][0].shape))
     print((dataset_name_1[0][1]))
-    dataset_name_2=GenericDataset_mnisit('mnisitm',split='train')
+    dataset_name_2=GenericDataset_mnisit('mnisitm',split='test')
     print((dataset_name_2[0][0].shape))
     print((dataset_name_2[0][1]))
     dataset = ConcatDataset([dataset_name_1,dataset_name_2])
 
-    dloader_train = DataLoader(
+    dloader_train = DataLoader_mnisit(
             dataset=dataset,
             batch_size=32,
             num_workers=5,
