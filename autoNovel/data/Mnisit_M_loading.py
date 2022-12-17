@@ -1,4 +1,3 @@
-from utils.util import seed_torch
 ####### IMPORTS
 ### torhc imports
 import torch
@@ -13,7 +12,7 @@ from PIL import Image
 import matplotlib.pyplot as plt
 import numpy as np
 import torchtext
-
+import random
 class MNISTM(VisionDataset):
     
 
@@ -115,7 +114,15 @@ class MNISTM(VisionDataset):
 
     def extra_repr(self):
         return "Split: {}".format("Train" if self.train is True else "Test")
-    
+def seed_torch(seed=1029):
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)  # if you are using multi-GPU.
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
     
 if __name__ == '__main__':
     seed_torch(1)
@@ -123,4 +130,5 @@ if __name__ == '__main__':
         transforms.ToTensor(),
         transforms.Normalize((0.5,), (0.5,))
     ])   
-    mnistm_ds = MNISTM('data/datasets/MNISIT_M/', download=True, train=False, transform=source_transform)
+    mnistm_ds = MNISTM('data/datasets/MNISIT_M/', download=False, train=False, transform=source_transform)
+    print(mnistm_ds)
