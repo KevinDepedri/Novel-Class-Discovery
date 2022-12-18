@@ -147,7 +147,7 @@ def train(epoch, model, device, dataloader, optimizer, exp_lr_scheduler, criteri
     return loss_record
 
 
-def test(model, device, dataloader, epoch, args):
+def test(model, device, dataloader, epoch):
     # Define an instance of AverageMeter to compute and store the average and current values of the accuracy
     acc_record = AverageMeter()
     # Put the model in evaluation mode
@@ -331,7 +331,7 @@ def main():
         # Compute the loss of the training step
         loss_record = train(epoch, model, device, dloader_train, optimizer, exp_lr_scheduler, criterion, args)
         # Compute the accuracy of the testing step
-        acc_record = test(model, device, dloader_test, epoch, args)
+        acc_record = test(model, device, dloader_test, epoch)
 
         # Compare the average accuracy saved in the AverageMeter object with the best accuracy measured up to now
         is_best = acc_record.avg > best_acc
