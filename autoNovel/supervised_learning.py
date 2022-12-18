@@ -8,11 +8,11 @@ from utils.util import cluster_acc, Identity, AverageMeter, accuracy
 from models.resnet import ResNet, BasicBlock, resnet_sim
 from data.cifarloader import CIFAR10Loader, CIFAR100Loader
 from data.svhnloader import SVHNLoader
+from data.MNISIT_loader import MNISITLoader, MNISITLoaderMix
 from tqdm import tqdm
 import numpy as np
 import os
 import wandb
-from data.MNISIT_loader import MNISITLoader, MNISITLoaderMix
 
 global logging_on
 
@@ -225,8 +225,8 @@ if __name__ == "__main__":
     Changing the New_SSL_methods will turn you from the normal rot net to 
     using other self supervised learning methods
     '''
-    New_SSL_methods = True
-    New_Resnet_config = True
+    New_SSL_methods = False
+    New_Resnet_config = False
     # model = resnet_sim(args.num_labeled_classes, args.num_unlabeled_classes).to(device)
 
     if New_SSL_methods:
@@ -333,7 +333,7 @@ if __name__ == "__main__":
                                           aug='once', shuffle=True,number_of_classes=5 )
         labeled_eval_loader = MNISITLoader(batch_size=args.batch_size, split='test',
                                          aug=None, shuffle=False, number_of_classes=5)
-        # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py --rotnet_dir ./data/experiments/self_super_mnisi/rotnet_mnisit_MIXMIX.pth --dataset_name mnisit --model_name resnet_rotnet_mnisit_MIX
+        # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py --rotnet_dir ./data/experiments/selfsupervised_learning/rotnet_mnisit_MIXMIX.pth --dataset_name mnisit --model_name resnet_rotnet_mnisit_MIX
 
     # Finally, if the mode argument is 'train', then run the training procedure
     if args.mode == 'train':
