@@ -189,7 +189,7 @@ if __name__ == '__main__':
 
     dloader_train = DataLoader_mnisit(
             dataset=dataset,
-            batch_size=32,
+            batch_size=64,
             num_workers=5,
             shuffle=True)
     def imshow(img):
@@ -199,5 +199,5 @@ if __name__ == '__main__':
     iterator=iter(dloader_train())
     inputs = next(iterator)
     # print(get_mean_and_std(dataset))
-
+    print(inputs[0].shape)
     imshow(torchvision.utils.make_grid(inputs[0]))

@@ -12,6 +12,7 @@ from tqdm import tqdm
 import numpy as np
 import os
 import wandb
+from data.MNISIT_loader import MNISITLoader, MNISITLoaderMix
 
 global logging_on
 
@@ -327,6 +328,12 @@ if __name__ == "__main__":
                                           aug='once', shuffle=True, target_list=range(args.num_labeled_classes))
         labeled_eval_loader = SVHNLoader(root=args.dataset_root, batch_size=args.batch_size, split='test',
                                          aug=None, shuffle=False, target_list=range(args.num_labeled_classes))
+    elif args.dataset_name == 'mnisit':
+        labeled_train_loader = MNISITLoader(batch_size=args.batch_size, split='train',
+                                          aug='once', shuffle=True,number_of_classes=5 )
+        labeled_eval_loader = MNISITLoader(batch_size=args.batch_size, split='test',
+                                         aug=None, shuffle=False, number_of_classes=5)
+        # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py --rotnet_dir ./data/experiments/self_super_mnisi/rotnet_mnisit_MIXMIX.pth --dataset_name mnisit --model_name resnet_rotnet_mnisit_MIX
 
     # Finally, if the mode argument is 'train', then run the training procedure
     if args.mode == 'train':
