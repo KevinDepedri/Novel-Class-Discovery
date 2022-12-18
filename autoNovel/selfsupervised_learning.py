@@ -13,6 +13,7 @@ import datetime
 import numpy as np
 from data.rotationloader import DataLoader, GenericDataset
 from data.rotation_loader_mnisit import DataLoader_mnisit, GenericDataset_mnisit
+from data.rotation_loader_mnisit_basline import DataLoader_mnisit_baseline, GenericDataset_mnisit_basline
 
 from utils.util import AverageMeter, accuracy,seed_torch
 from models.resnet import BasicBlock
@@ -253,6 +254,20 @@ def main():
         dataset = ConcatDataset([dataset_name_1,dataset_name_2])
         dloader_test = DataLoader_mnisit(
             dataset=dataset,
+            batch_size=args.batch_size,
+            num_workers=args.num_workers,
+            shuffle=True)
+    elif (args.dataset_name=="mnisit_base"):
+            # CUDA_VISIBLE_DEVICES=0 python selfsupervised_learning.py --dataset_name mnisit --model_name rotnet_mnisit_MIXMIX 
+        dataset_name_1=GenericDataset_mnisit_basline('mnisit',split='train')
+        dloader_train = DataLoader_mnisit_baseline(
+            dataset=dataset_name_1,
+            batch_size=args.batch_size,
+            num_workers=args.num_workers,
+            shuffle=True)
+        dataset_name_1=GenericDataset_mnisit('mnisit',split='test')
+        dloader_test = DataLoader_mnisit_baseline(
+            dataset=dataset_name_1,
             batch_size=args.batch_size,
             num_workers=args.num_workers,
             shuffle=True)

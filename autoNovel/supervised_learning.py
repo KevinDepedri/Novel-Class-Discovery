@@ -330,9 +330,9 @@ if __name__ == "__main__":
                                          aug=None, shuffle=False, target_list=range(args.num_labeled_classes))
     elif args.dataset_name == 'mnisit':
         labeled_train_loader = MNISITLoader(batch_size=args.batch_size, split='train',
-                                          aug='once', shuffle=True,number_of_classes=5 )
+                                          aug='once', shuffle=True,catego='labeled',number_of_classes=5 )
         labeled_eval_loader = MNISITLoader(batch_size=args.batch_size, split='test',
-                                         aug=None, shuffle=False, number_of_classes=5)
+                                         aug=None, shuffle=False,catego='labeled', number_of_classes=5)
         # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py --rotnet_dir ./data/experiments/selfsupervised_learning/rotnet_mnisit_MIXMIX.pth --dataset_name mnisit --model_name resnet_rotnet_mnisit_MIX
 
     # Finally, if the mode argument is 'train', then run the training procedure

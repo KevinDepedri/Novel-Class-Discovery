@@ -28,7 +28,7 @@ class MNISIT_MIX(data.Dataset):
     def __len__(self):
         return len(self.data)
 
-def MNISITData(split='train', aug=None, number_of_classes=5):
+def MNISITData(split='train', aug=None, number_of_classes=5,catego='labeled'):
     mean_pix = [x / 255.0 for x in [57.3801, 57.7565, 53.2447]]# this is the std and mean calculated for the new dataset
     std_pix = [x / 255.0 for x in [69.0935, 68.2257, 68.3474]]
     if aug==None:
@@ -54,16 +54,19 @@ def MNISITData(split='train', aug=None, number_of_classes=5):
     dataset_name_1=MNISIT_MIX('mnisit',split=split,transform=transform)
     dataset_name_2=MNISIT_MIX('mnisitm',split=split,transform=transform)
     if number_of_classes==5:
-        dataset = MNISIT_MIX('mnisit',split=split,transform=transform)
+        if catego=="labeled":
+            dataset = MNISIT_MIX('mnisit',split=split,transform=transform)
+        elif catego=="unlabeled":
+            dataset = MNISIT_MIX('mnisitm',split=split,transform=transform)
     else:
         dataset = ConcatDataset([dataset_name_1,dataset_name_2])
     return dataset
-def MNISITLoader(batch_size, split='train', num_workers=2,  aug=None, shuffle=True, number_of_classes=5):
-    dataset = MNISITData(split, aug, number_of_classes)
+def MNISITLoader(batch_size, split='train', num_workers=2,  aug=None, shuffle=True, catego='labeled',number_of_classes=5):
+    dataset = MNISITData(split, aug, number_of_classes,catego)
     loader = data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     return loader
-def MNISITLoaderMix(batch_size, split='train',num_workers=2, aug=None, shuffle=True, number_of_classes=5):
-    dataset = MNISITData(split, aug, number_of_classes)
+def MNISITLoaderMix(batch_size, split='train',num_workers=2, aug=None, shuffle=True,catego='labeled',number_of_classes=5):
+    dataset = MNISITData(split, aug, number_of_classes,catego)
     loader = data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
     return loader
 def seed_torch(seed=1029):

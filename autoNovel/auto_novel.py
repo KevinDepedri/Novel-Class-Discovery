@@ -10,6 +10,7 @@ from utils import ramps
 from models.resnet import ResNet, BasicBlock, resnet_sim
 from data.cifarloader import CIFAR10Loader, CIFAR10LoaderMix, CIFAR100Loader, CIFAR100LoaderMix
 from data.svhnloader import SVHNLoader, SVHNLoaderMix
+from data.MNISIT_loader import MNISITLoader, MNISITLoaderMix
 from tqdm import tqdm
 import numpy as np
 import os
@@ -426,7 +427,7 @@ if __name__ == "__main__":
     # Define the name of the path to save the trained model
     args.model_dir = model_dir + '/' + '{}.pth'.format(args.model_name)
 
-    New_resnet = True
+    New_resnet = False
     # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_Barlow_twins_2.pth resnet_IL_cifar10_Barlow_twins_2
     if New_resnet:
         # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_new_config.pth resnet_IL_cifar10_new_config
@@ -549,6 +550,21 @@ if __name__ == "__main__":
                                          shuffle=False, target_list=range(args.num_labeled_classes))
         all_eval_loader = SVHNLoader(root=args.dataset_root, batch_size=args.batch_size, split='test', aug=None,
                                      shuffle=False, target_list=range(num_classes))
+    elif args.dataset_name == 'mnisit':
+        mix_train_loader = MNISITLoaderMix(batch_size=args.batch_size, split='train', aug='twice',
+                                         shuffle=True,catego='labeled', number_of_classes=10)
+        labeled_train_loader = MNISITLoader( batch_size=args.batch_size, split='train', aug='once',
+                                          shuffle=True,catego='labeled', number_of_classes=5)
+        unlabeled_eval_loader = MNISITLoader( batch_size=args.batch_size, split='train', aug=None,
+                                           shuffle=False, catego='unlabeled',number_of_classes=5)
+        unlabeled_eval_loader_test = MNISITLoader( batch_size=args.batch_size, split='test',
+                                                aug=None, shuffle=False,catego='unlabeled',
+                                                number_of_classes=5)
+        labeled_eval_loader = MNISITLoader( batch_size=args.batch_size, split='test', aug=None,
+                                         shuffle=False, catego='labeled', number_of_classes=5)
+        all_eval_loader = MNISITLoader(batch_size=args.batch_size, split='test', aug=None,
+                                     shuffle=False,catego='labeled', number_of_classes=10)
+    # CUDA_VISIBLE_DEVICES=0 sh scripts/autonovel_IL_mnisit_mix.sh ./data/datasets/MNISIT/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_mnisit_MIX.pth resnet_IL_minsiit_mix
 
     # Finally, if the mode argument is 'train', then run the training procedure
     if args.mode == 'train':
@@ -592,21 +608,21 @@ if __name__ == "__main__":
     print('\n\n\nEVALUATING ON HEAD1')
     args.head = 'head1'
     print('Test on labeled classes (test split)')
-    test(model, labeled_eval_loader, 'labeled_classes_test_split', args)
+    test(model, labeled_eval_loader,  args)
     if args.IL:
         print('\n\nTest on unlabeled classes (test split)')
-        test(model, unlabeled_eval_loader_test, 'unlabeled_classes_test_split', args)
+        test(model, unlabeled_eval_loader_test,  args)
         print('\n\nTest on all classes (test split)')
-        test(model, all_eval_loader, 'all_classes_test_split', args)
+        test(model, all_eval_loader, args)
 
     # Then test the model using head2 over the unlabeled dataloader
     print('\n\n\nEVALUATING ON HEAD2')
     args.head = 'head2'
     print('test on unlabeled classes (train split)')
-    test(model, unlabeled_eval_loader, 'unlabeled_classes_train_split', args)
+    test(model, unlabeled_eval_loader,  args)
 
     print('\n\ntest on unlabeled classes (test split)')
-    test(model, unlabeled_eval_loader_test, 'unlabeled_classes_test_split', args)
+    test(model, unlabeled_eval_loader_test,  args)
 
     if logging_on:
         wandb.finish()
