@@ -83,8 +83,10 @@ class DataLoader_mnisit_baseline(object):
         self.batch_size = batch_size  # Batch size
         self.unsupervised = unsupervised  # Flag to indicate unsupervised
         self.num_workers = num_workers  # Num of workers
-        self.mean_pix = [x / 255.0 for x in [57.3801, 57.7565, 53.2447]]# this is the std and mean calculated for the new dataset
-        self.std_pix = [x / 255.0 for x in [69.0935, 68.2257, 68.3474]]
+        self.mean_pix = [x / 255.0 for x in [25.5093, 25.5093, 25.5093]]# this is the std and mean calculated for the new dataset
+        # self.mean_pix = 0.1307
+        # self.std_pix  = 0.3081
+        self.std_pix = [x / 255.0 for x in [68.7726, 68.7726, 68.7726] ]
         self.transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(mean=self.mean_pix, std=self.std_pix)

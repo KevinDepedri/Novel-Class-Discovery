@@ -258,14 +258,14 @@ def main():
             num_workers=args.num_workers,
             shuffle=True)
     elif (args.dataset_name=="mnisit_base"):
-            # CUDA_VISIBLE_DEVICES=0 python selfsupervised_learning.py --dataset_name mnisit --model_name rotnet_mnisit_MIXMIX 
+            # CUDA_VISIBLE_DEVICES=0 python selfsupervised_learning.py --dataset_name mnisit_base --model_name rotnet_mnisit_only 
         dataset_name_1=GenericDataset_mnisit_basline('mnisit',split='train')
         dloader_train = DataLoader_mnisit_baseline(
             dataset=dataset_name_1,
             batch_size=args.batch_size,
             num_workers=args.num_workers,
             shuffle=True)
-        dataset_name_1=GenericDataset_mnisit('mnisit',split='test')
+        dataset_name_1=GenericDataset_mnisit_basline('mnisit',split='test')
         dloader_test = DataLoader_mnisit_baseline(
             dataset=dataset_name_1,
             batch_size=args.batch_size,
