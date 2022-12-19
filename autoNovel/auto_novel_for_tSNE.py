@@ -372,11 +372,11 @@ def test(model, test_loader, plot_name, args):
         targets = np.append(targets, label.cpu().numpy())
         preds = np.append(preds, pred.cpu().numpy())
 
-    # Get the feature label dataframe
-    model.get_feature_label_dataframe(print_df=True)
-
     tSNE = True
     if tSNE:
+        # Get the feature label dataframe
+        model.get_feature_label_dataframe(print_df=True)
+
         # Define the name of the plot
         partial_plot_path = str('tSNE_plots/' + args.model_name)
         full_plot_path = str(partial_plot_path + '/' + 'tSNE_' + args.head + '_' + plot_name + '.png')
