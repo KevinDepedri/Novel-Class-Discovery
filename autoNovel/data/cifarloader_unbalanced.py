@@ -339,12 +339,16 @@ def CIFAR10LoaderMix(root, batch_size, split='train', num_workers=2, aug=None, s
     # - dataset_unlabeled.data has size of (50000, 32, 32, 3)
     # - dataset_unlabeled.targets has size of 50000
     # Of this dataset the first half is labeled while the second half is unlabeled
-    dataset_labeled.targets = np.concatenate((dataset_labeled.targets, dataset_unlabeled.targets))
-    dataset_labeled.data = np.concatenate((dataset_labeled.data, dataset_unlabeled.data), 0)
+    dataset_labeled.final_targets = np.concatenate((dataset_labeled.final_targets, dataset_unlabeled.final_targets))
+    dataset_labeled.final_data = np.concatenate((dataset_labeled.final_data, dataset_unlabeled.final_data), 0)
 
     # Instantiate a dataloader for that dataset with the specific batch_size and enabling shuffle to mix the order of
     # the labeled and the unlabeled samples. Finally return this loader
     loader = data.DataLoader(dataset_labeled, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+
+    print(f"Total number of samples and labels in CIFAR10LoaderMix dataset: "
+          f"{len(dataset_labeled.final_data), len(dataset_labeled.final_targets)}")
+
     return loader
 
 
