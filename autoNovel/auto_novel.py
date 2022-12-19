@@ -426,8 +426,8 @@ if __name__ == "__main__":
         os.makedirs(model_dir)
     # Define the name of the path to save the trained model
     args.model_dir = model_dir + '/' + '{}.pth'.format(args.model_name)
-
-    New_resnet = False
+    # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_no__SSL_Ad_ROT.pth resnet_IL_cifar10_NO_rotnet
+    New_resnet = True
     # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_Barlow_twins_2.pth resnet_IL_cifar10_Barlow_twins_2
     if New_resnet:
         # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_new_config.pth resnet_IL_cifar10_new_config

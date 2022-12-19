@@ -1,11 +1,11 @@
 import torchvision.transforms as transforms
-from  utils import TransformTwice
+from  .utils import TransformTwice
 from torch.utils.data import ConcatDataset
 import torch
 import torch.utils.data as data
 import numpy as np 
-from Mnisit_M_loading import MNISTM
-from Mnisit_loading import MNIST_DS
+from .Mnisit_M_loading import MNISTM
+from .Mnisit_loading import MNIST_DS
 import random
 import os
 import torchvision
