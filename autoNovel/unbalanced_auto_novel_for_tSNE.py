@@ -442,7 +442,7 @@ if __name__ == "__main__":
     parser.add_argument('--dataset_name', type=str, default='cifar10', help='options: cifar10, cifar100, svhn')  # Name of the used dataset
     parser.add_argument('--seed', default=1, type=int)  # Seed to use
     parser.add_argument('--mode', type=str, default='train')  # Mode: train or test
-    logging_on = False  # Variable to stop logging when we do not want to log anything
+    logging_on = True  # Variable to stop logging when we do not want to log anything
 
     # Extract the args and make them available in the args object
     args = parser.parse_args()
