@@ -211,12 +211,12 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
         print('Train Epoch: {} Avg Loss: {:.4f}'.format(epoch, loss_record.avg))
 
         # Set the head argument to 'head1', this to ensure that we test the supervised head in the training step below
-        print('\ntest on labeled classes')
+        print('\ttest on labeled classes')
         args.head = 'head1'
         acc_H1, nmi_H1, ari_H1, acc_testing_H1 = test(model, labeled_eval_loader, '_', args)
 
         # Set the head argument to 'head2', this to ensure that we test the unsupervised head in the training step below
-        print('\ntest on unlabeled classes')
+        print('\ttest on unlabeled classes')
         args.head = 'head2'
         acc_H2, nmi_H2, ari_H2, _ = test(model, unlabeled_eval_loader, '_', args)
         # Print the result of the testing procedure obtained computing the three metrics above
