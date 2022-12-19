@@ -5,7 +5,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import torchvision
-from data.MNISIT_loader import MNISITLoader_main, MNISITLoaderMix_main
+from data.MNISIT_loader import MNISITLoader_main, MNISITLoader
 
 def seed_torch(seed=1029):
     random.seed(seed)
@@ -31,7 +31,13 @@ def get_mean_and_std(dataset):
         return mean, std
 def imshow(img):
         npimg = img.numpy()
+        f = plt.figure(figsize=(10, 6))
+        ax = f.add_subplot()
+
         plt.imshow((np.transpose(npimg, (1, 2, 0))* 255).astype(np.uint8))
+        ax.axis(False)
+        ax.set_position([0, 0, 1, 1])
+        plt.savefig('images/Mnisit.png')
         plt.show()
 if __name__ == '__main__':
     seed_torch(1)
@@ -54,8 +60,9 @@ if __name__ == '__main__':
     # # print(get_mean_and_std(dataset_name))
     # print(inputs[0].shape)
     # imshow(torchvision.utils.make_grid(inputs[0]))
-    x=MNISITLoader_main(64,'train',2,None ,shuffle=True,catego='unlabeled',number_of_classes=10)
-    # x=MNISITLoaderMix_main(64,'train',2,'twice' ,shuffle=True, number_of_classes=10)
+    x=MNISITLoader_main(32,'train',2,None ,shuffle=True,catego='unlabeled',number_of_classes=10)
+    # x=MNISITLoader(32,'train',2,None ,shuffle=True,catego='unlabeled',number_of_classes=10)
+
     iterator=iter(x)
     inputs = next(iterator)
     # print(inputs[0][0].shape)

@@ -192,10 +192,7 @@ if __name__ == '__main__':
             batch_size=64,
             num_workers=5,
             shuffle=True)
-    def imshow(img):
-        npimg = img.numpy()
-        plt.imshow((np.transpose(npimg, (1, 2, 0))* 255).astype(np.uint8))
-        plt.show()
+
     iterator=iter(dloader_train())
     inputs = next(iterator)
     # print(get_mean_and_std(dataset))
