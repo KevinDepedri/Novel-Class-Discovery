@@ -1,11 +1,11 @@
 import torchvision.transforms as transforms
-from  .utils import TransformTwice
+from  utils import TransformTwice
 from torch.utils.data import ConcatDataset
 import torch
 import torch.utils.data as data
 import numpy as np 
-from .Mnisit_M_loading import MNISTM
-from .Mnisit_loading import MNIST_DS
+from Mnisit_M_loading import MNISTM
+from Mnisit_loading import MNIST_DS
 import random
 import os
 import torchvision
@@ -144,14 +144,16 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
     seed_torch(1)
     # x=MNISITLoader(64,'train',2,'twice' ,shuffle=True,number_of_classes=5)
-    x=MNISITLoaderMix(64,'train',2,'twice' ,shuffle=True, number_of_classes=10)
-    def imshow(img):
-        npimg = img.numpy()
-        plt.imshow((np.transpose(npimg, (1, 2, 0))* 255).astype(np.uint8))
-        plt.show()
-    iterator=iter(x)
-    inputs = next(iterator)
-    # print(inputs[0][0].shape)
-    # print(torch.sum((inputs[0][0][0]==inputs[0][0][0]).int()))
-    imshow(torchvision.utils.make_grid(inputs[0][0]))
-    imshow(torchvision.utils.make_grid(inputs[0][1]))
+    # x=MNISITLoaderMix(64,'train',2,'twice' ,shuffle=True, number_of_classes=10)
+    # def imshow(img):
+    #     npimg = img.numpy()
+    #     plt.imshow((np.transpose(npimg, (1, 2, 0))* 255).astype(np.uint8))
+    #     plt.show()
+    # iterator=iter(x)
+    # inputs = next(iterator)
+    # # print(inputs[0][0].shape)
+    # # print(torch.sum((inputs[0][0][0]==inputs[0][0][0]).int()))
+    # imshow(torchvision.utils.make_grid(inputs[0][0]))
+    # imshow(torchvision.utils.make_grid(inputs[0][1]))
+    
+
