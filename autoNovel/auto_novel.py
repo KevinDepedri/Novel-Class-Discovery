@@ -10,7 +10,7 @@ from utils import ramps
 from models.resnet import ResNet, BasicBlock, resnet_sim
 from data.cifarloader import CIFAR10Loader, CIFAR10LoaderMix, CIFAR100Loader, CIFAR100LoaderMix
 from data.svhnloader import SVHNLoader, SVHNLoaderMix
-from data.MNISIT_loader import MNISITLoader, MNISITLoaderMix
+from data.MNISIT_loader import MNISITLoader, MNISITLoaderMix,MNISITLoader_main, MNISITLoaderMix_main
 from tqdm import tqdm
 import numpy as np
 import os
@@ -490,6 +490,7 @@ if __name__ == "__main__":
         # It is in format of ((picture1,picture2),label,index) where picture 1 is the original example, picture 2 is
         # the augmentation of the original example, label is the label for both the samples and index is the position
         # of that specific example in the original dataset
+        print(args.dataset_name)
         mix_train_loader = CIFAR10LoaderMix(root=args.dataset_root, batch_size=args.batch_size, split='train',
                                             aug='twice', shuffle=True, labeled_list=range(args.num_labeled_classes),
                                             unlabeled_list=range(args.num_labeled_classes, num_classes))
@@ -551,6 +552,7 @@ if __name__ == "__main__":
         all_eval_loader = SVHNLoader(root=args.dataset_root, batch_size=args.batch_size, split='test', aug=None,
                                      shuffle=False, target_list=range(num_classes))
     elif args.dataset_name == 'mnisit':
+        print(args.dataset_name)
         mix_train_loader = MNISITLoaderMix(batch_size=args.batch_size, split='train', aug='twice',
                                          shuffle=True,catego='labeled', number_of_classes=10)
         labeled_train_loader = MNISITLoader( batch_size=args.batch_size, split='train', aug='once',
@@ -564,7 +566,23 @@ if __name__ == "__main__":
                                          shuffle=False, catego='labeled', number_of_classes=5)
         all_eval_loader = MNISITLoader(batch_size=args.batch_size, split='test', aug=None,
                                      shuffle=False,catego='labeled', number_of_classes=10)
-    # CUDA_VISIBLE_DEVICES=0 sh scripts/autonovel_IL_mnisit_mix.sh ./data/datasets/MNISIT/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_mnisit_MIX.pth resnet_IL_minsiit_mix
+    # CUDA_VISIBLE_DEVICES=0 sh scripts/autonovel_IL_mnisit_mix.sh ./data/datasets/MNISIT/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_mnisit_MIX.pth resnet_IL_minsiit_mix mnisit
+    elif args.dataset_name == 'mnisit_baseline':
+        print(args.dataset_name)
+        mix_train_loader = MNISITLoaderMix_main(batch_size=args.batch_size, split='train', aug='twice',
+                                         shuffle=True,catego='labeled', number_of_classes=10)
+        labeled_train_loader = MNISITLoader_main( batch_size=args.batch_size, split='train', aug='once',
+                                          shuffle=True,catego='labeled', number_of_classes=5)
+        unlabeled_eval_loader = MNISITLoader_main( batch_size=args.batch_size, split='train', aug=None,
+                                           shuffle=False, catego='unlabeled',number_of_classes=5)
+        unlabeled_eval_loader_test = MNISITLoader_main( batch_size=args.batch_size, split='test',
+                                                aug=None, shuffle=False,catego='unlabeled',
+                                                number_of_classes=5)
+        labeled_eval_loader = MNISITLoader_main( batch_size=args.batch_size, split='test', aug=None,
+                                         shuffle=False, catego='labeled', number_of_classes=5)
+        all_eval_loader = MNISITLoader_main(batch_size=args.batch_size, split='test', aug=None,
+                                     shuffle=False,catego='labeled', number_of_classes=10)
+    # CUDA_VISIBLE_DEVICES=0 sh scripts/autonovel_IL_mnisit_mix.sh ./data/datasets/MNISIT/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_mnisit_baseline.pth resnet_IL_minsiit_baseline mnisit_baseline
 
     # Finally, if the mode argument is 'train', then run the training procedure
     if args.mode == 'train':

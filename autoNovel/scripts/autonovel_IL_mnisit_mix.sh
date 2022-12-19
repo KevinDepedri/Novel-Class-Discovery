@@ -5,6 +5,7 @@ python auto_novel.py \
         --exp_root $2 \
         --warmup_model_dir $3 \
         --model_name $4 \
+        --dataset_name $5 \
         --lr 0.1 \
         --step_size 170 \
         --batch_size 128 \
@@ -14,5 +15,4 @@ python auto_novel.py \
         --IL \
         --increment_coefficient 0.05 \
         --seed 0 \
-        --dataset_name mnisit \
         --mode train
