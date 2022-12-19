@@ -5,6 +5,8 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 import torchvision
+from data.MNISIT_loader import MNISITLoader_main, MNISITLoaderMix_main
+
 def seed_torch(seed=1029):
     random.seed(seed)
     os.environ['PYTHONHASHSEED'] = str(seed)
@@ -33,22 +35,30 @@ def imshow(img):
         plt.show()
 if __name__ == '__main__':
     seed_torch(1)
-    dataset_name=GenericDataset_mnisit_basline('mnisit',split='train')
+    # dataset_name=GenericDataset_mnisit_basline('mnisit',split='train')
 
 
-    dloader_train = DataLoader_mnisit_baseline(
-                dataset=dataset_name,
-                batch_size=20,
-                num_workers=5,
-                shuffle=True)
-    dataset_name_1=GenericDataset_mnisit_basline('mnisit',split='test')
-    dloader_test = DataLoader_mnisit_baseline(
-                dataset=dataset_name_1,
-                batch_size=20,
-                num_workers=6,
-                shuffle=True)
-    iterator=iter(dloader_test())
+    # dloader_train = DataLoader_mnisit_baseline(
+    #             dataset=dataset_name,
+    #             batch_size=20,
+    #             num_workers=5,
+    #             shuffle=True)
+    # dataset_name_1=GenericDataset_mnisit_basline('mnisit',split='test')
+    # dloader_test = DataLoader_mnisit_baseline(
+    #             dataset=dataset_name_1,
+    #             batch_size=20,
+    #             num_workers=6,
+    #             shuffle=True)
+    # iterator=iter(dloader_test())
+    # inputs = next(iterator)
+    # # print(get_mean_and_std(dataset_name))
+    # print(inputs[0].shape)
+    # imshow(torchvision.utils.make_grid(inputs[0]))
+    x=MNISITLoader_main(64,'train',2,None ,shuffle=True,catego='unlabeled',number_of_classes=10)
+    # x=MNISITLoaderMix_main(64,'train',2,'twice' ,shuffle=True, number_of_classes=10)
+    iterator=iter(x)
     inputs = next(iterator)
-    # print(get_mean_and_std(dataset_name))
-    print(inputs[0].shape)
+    # print(inputs[0][0].shape)
+    # print(torch.sum((inputs[0][0][0]==inputs[0][0][0]).int()))
     imshow(torchvision.utils.make_grid(inputs[0]))
+    # imshow(torchvision.utils.make_grid(inputs[0][1]))

@@ -8,7 +8,7 @@ from utils.util import cluster_acc, Identity, AverageMeter, accuracy
 from models.resnet import ResNet, BasicBlock, resnet_sim
 from data.cifarloader import CIFAR10Loader, CIFAR100Loader
 from data.svhnloader import SVHNLoader
-from data.MNISIT_loader import MNISITLoader, MNISITLoaderMix
+from data.MNISIT_loader import MNISITLoader, MNISITLoaderMix,MNISITLoader_main, MNISITLoaderMix_main
 from tqdm import tqdm
 import numpy as np
 import os
@@ -334,6 +334,12 @@ if __name__ == "__main__":
         labeled_eval_loader = MNISITLoader(batch_size=args.batch_size, split='test',
                                          aug=None, shuffle=False,catego='labeled', number_of_classes=5)
         # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py --rotnet_dir ./data/experiments/selfsupervised_learning/rotnet_mnisit_MIXMIX.pth --dataset_name mnisit --model_name resnet_rotnet_mnisit_MIX
+    elif args.dataset_name == 'mnisit_baseline':
+        labeled_train_loader = MNISITLoader_main(batch_size=args.batch_size, split='train',
+                                          aug='once', shuffle=True,catego='labeled',number_of_classes=5 )
+        labeled_eval_loader = MNISITLoader_main(batch_size=args.batch_size, split='test',
+                                         aug=None, shuffle=False,catego='labeled', number_of_classes=5)
+    # CUDA_VISIBLE_DEVICES=0 python supervised_learning.py --rotnet_dir ./data/experiments/selfsupervised_learning/rotnet_mnisit_only.pth --dataset_name mnisit_baseline --model_name resnet_rotnet_mnisit_baseline
 
     # Finally, if the mode argument is 'train', then run the training procedure
     if args.mode == 'train':
