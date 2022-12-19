@@ -22,6 +22,7 @@ global logging_on
 
 
 def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args):
+    print("STARTING NORMAL TRAINING")
     # Instantiate SGD optimizer with input learning rate, momentum and weight_decay
     optimizer = SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
 
@@ -63,9 +64,9 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
             x, x_bar, label = x.to(device), x_bar.to(device), label.to(device)
 
             # Output1, Output2 and feat are the results of Head1, Head2, and features-layer4 for the base samples
-            output1, output2, feat = model(x)  # Outputs of the two heads are each (128,5)
+            output1, output2, feat = model([x, label])  # Outputs of the two heads are each (128,5)
             # Output1_bar, Output2_bar are the results of Head1, Head2, and features-layer4 for the augmented samples
-            output1_bar, output2_bar, _ = model(x_bar)  # getting output of 2 heads
+            output1_bar, output2_bar, _ = model([x_bar, label])  # getting output of 2 heads
 
             # Apply softmax on all the computed outputs to turn everything into probabilities
             prob1, prob1_bar, prob2, prob2_bar = F.softmax(output1, dim=1), F.softmax(output1_bar, dim=1), \
@@ -210,14 +211,14 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
         print('Train Epoch: {} Avg Loss: {:.4f}'.format(epoch, loss_record.avg))
 
         # Set the head argument to 'head1', this to ensure that we test the supervised head in the training step below
-        print('test on labeled classes')
+        print('\ttest on labeled classes')
         args.head = 'head1'
-        acc_H1, nmi_H1, ari_H1, acc_testing_H1 = test(model, labeled_eval_loader, args)
+        acc_H1, nmi_H1, ari_H1, acc_testing_H1 = test(model, labeled_eval_loader, '_', args)
 
         # Set the head argument to 'head2', this to ensure that we test the unsupervised head in the training step below
-        print('test on unlabeled classes')
+        print('\ttest on unlabeled classes')
         args.head = 'head2'
-        acc_H2, nmi_H2, ari_H2, _ = test(model, unlabeled_eval_loader, args)
+        acc_H2, nmi_H2, ari_H2, _ = test(model, unlabeled_eval_loader, '_', args)
         # Print the result of the testing procedure obtained computing the three metrics above
         if logging_on:
             wandb.log({"epoch": epoch, "Total_average_loss": loss_record.avg, "Cross_entropy_loss": loss_record_CEL.avg,
@@ -233,6 +234,7 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
 
 
 def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args):
+    print("STARTING INCREMENTAL-LEARNING TRAINING")
     optimizer = SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)
     criterion1 = nn.CrossEntropyLoss()
@@ -251,8 +253,8 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
         w = args.rampup_coefficient * ramps.sigmoid_rampup(epoch, args.rampup_length)
         for batch_idx, ((x, x_bar), label, idx) in enumerate(tqdm(train_loader)):
             x, x_bar, label = x.to(device), x_bar.to(device), label.to(device)
-            output1, output2, feat = model(x)
-            output1_bar, output2_bar, _ = model(x_bar)
+            output1, output2, feat = model([x, label])
+            output1_bar, output2_bar, _ = model([x_bar, label])
             prob1, prob1_bar, prob2, prob2_bar = F.softmax(output1, dim=1), F.softmax(output1_bar, dim=1), F.softmax(
                 output2, dim=1), F.softmax(output2_bar, dim=1)
             # we transfer them to probabilities
@@ -310,12 +312,12 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
             optimizer.step()
         exp_lr_scheduler.step()
         print('Train Epoch: {} Avg Loss: {:.4f}'.format(epoch, loss_record.avg))
-        print('test on labeled classes')
+        print('\ttest on labeled classes')
         args.head = 'head1'
-        acc_H1, nmi_H1, ari_H1, acc_testing_H1 = test(model, labeled_eval_loader, args)
-        print('test on unlabeled classes')
+        acc_H1, nmi_H1, ari_H1, acc_testing_H1 = test(model, labeled_eval_loader, '_', args)
+        print('\ttest on unlabeled classes')
         args.head = 'head2'
-        acc_H2, nmi_H2, ari_H2, _ = test(model, unlabeled_eval_loader, args)
+        acc_H2, nmi_H2, ari_H2, _ = test(model, unlabeled_eval_loader, '_', args)
         if logging_on:
             wandb.log({"epoch": epoch, "Total_average_loss": loss_record.avg, "Cross_entropy_loss": loss_record_CEL.avg,
                        "Binary_cross_entropy_loss": loss_record_BCE.avg,
@@ -371,8 +373,8 @@ def test(model, test_loader, plot_name, args):
             acc_testing = 0
         targets = np.append(targets, label.cpu().numpy())
         preds = np.append(preds, pred.cpu().numpy())
-
-    tSNE = True
+    
+    tSNE = False
     if tSNE:
         # Get the feature label dataframe
         model.get_feature_label_dataframe(print_df=True)
@@ -389,7 +391,7 @@ def test(model, test_loader, plot_name, args):
     # Compute the accuracy metrics for the current test step, see supervised_learning.py for full explanation
     acc, nmi, ari = cluster_acc(targets.astype(int), preds.astype(int)), nmi_score(targets, preds), ari_score(targets,
                                                                                                               preds)
-    print('Test cluster acc {:.4f}, nmi {:.4f}, ari {:.4f}, test accuracy {:.4f}'.format(acc, nmi, ari, acc_record.avg))
+    print('\tTest cluster acc {:.4f}, nmi {:.4f}, ari {:.4f}, test accuracy {:.4f}'.format(acc, nmi, ari, acc_record.avg))
     return acc, nmi, ari, acc_record.avg
 
 
@@ -413,14 +415,14 @@ if __name__ == "__main__":
     parser.add_argument('--num_labeled_classes', default=5, type=int)  # Number of labeled classes
     parser.add_argument('--dataset_root', type=str, default='./data/datasets/CIFAR/')  # Dataset root directory
     parser.add_argument('--exp_root', type=str, default='./data/experiments/')  # Directory to save the resulting files
-    parser.add_argument('--warmup_model_dir', type=str, default='./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth')  # Directory to find the supervised pretrained model
+    parser.add_argument('--warmup_model_dir', type=str, default='./data/experiments/unbalanced_supervised_learning/resnet_rotnet_cifar10_unbalanced.pth')  # Directory to find the supervised pretrained model
     parser.add_argument('--topk', default=5, type=int)  # Number of top elements that we want to compare
-    parser.add_argument('--IL', action='store_true', default=True, help='w/ incremental learning')  # Enable/Disable IL
-    parser.add_argument('--model_name', type=str, default='resnet_IL_cifar10')  # Name of the model
+    parser.add_argument('--IL', action='store_true', default=False, help='w/ incremental learning')  # Enable/Disable IL
+    parser.add_argument('--model_name', type=str, default='resnet_IL_cifar10_unbalanced')  # Name of the model
     parser.add_argument('--dataset_name', type=str, default='cifar10', help='options: cifar10, cifar100, svhn')  # Name of the used dataset
     parser.add_argument('--seed', default=1, type=int)  # Seed to use
-    parser.add_argument('--mode', type=str, default='test')  # Mode: train or test
-    logging_on = False  # Variable to stop logging when we do not want to log anything
+    parser.add_argument('--mode', type=str, default='train')  # Mode: train or test
+    logging_on = True  # Variable to stop logging when we do not want to log anything
 
     # Extract the args and make them available in the args object
     args = parser.parse_args()
@@ -445,14 +447,22 @@ if __name__ == "__main__":
         os.makedirs(partial_plot_path)
 
     # Choose which ResNet architecture we want to run
-    New_resnet = True
+    New_resnet = False
     if New_resnet:
         # Initialize the New ResNet architecture (original resnet no changes) and also the BasicBlock. Then send cuda
         model = resnet_sim(args.num_labeled_classes, args.num_unlabeled_classes).to(device)
+        # TODO: Write the correct options here
+        # Use one of the following command lines from console to run the old architecture with the selected SSL:
+        # Use the following command line from console to run the old architecture:# CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10_tSNE.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_Barlow_twins_2.pth resnet_IL_cifar10_Barlow_twins_2
+        # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10_tSNE.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_new_config.pth resnet_IL_cifar10_new_config
+        # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10_tSNE.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_simsam_2.pth resnet_IL_cifar10_simsam_2
 
     else:
         # Initialize the old ResNet architecture (changed from the authors) and also the BasicBlock. Then Send cuda
         model = ResNet(BasicBlock, [2, 2, 2, 2], args.num_labeled_classes, args.num_unlabeled_classes).to(device)
+        # TODO: Write the correct option here
+        # Use the following command line from console to run the old architecture:
+        # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10_tSNE.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_basicconfig.pth resnet_IL_cifar10_basic_config
 
     # Default inputs assume that we are working with 10 classes of which: 5 classes unlabeled 5 classes labeled.
     # We have two heads in this ResNet model, head1 for the labeled and head2 for the unlabeled data.
@@ -499,7 +509,7 @@ if __name__ == "__main__":
     if args.dataset_name == 'cifar10':
         # Dictionary of the samples that we want to remove from each class. For each class (labels from 0 to 9) it is
         # possible to specify how many samples we want to be removed. They will be removed randomly in that class.
-        unbalanced = False
+        unbalanced = True
         if unbalanced:
             train_sample_per_class_to_remove_dictionary = {0: 4500, 1: 4500, 2: 4500, 3: 4500, 4: 4500,
                                                            5: 0, 6: 0, 7: 0, 8: 0, 9: 0}
