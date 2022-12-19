@@ -7,7 +7,6 @@ from sklearn.metrics import adjusted_rand_score as ari_score
 from sklearn.cluster import KMeans
 from utils.util import BCE, PairEnum, cluster_acc, Identity, AverageMeter, seed_torch, accuracy
 from utils import ramps
-from models.resnet_with_tSNE import ResNet, BasicBlock, resnet_sim
 from data.cifarloader_unbalanced import CIFAR10Loader, CIFAR10LoaderMix, CIFAR100Loader, CIFAR100LoaderMix
 from data.svhnloader import SVHNLoader, SVHNLoaderMix
 from tqdm import tqdm
@@ -20,9 +19,15 @@ import pandas as pd
 # Auto-novel training without incremental learning (IL)
 global logging_on
 
+tSNE = False
+if tSNE:
+    from models.resnet_with_tSNE import ResNet, BasicBlock, resnet_sim
+else:
+    from models.resnet import ResNet, BasicBlock, resnet_sim
+
 
 def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args):
-    print("STARTING NORMAL TRAINING")
+    print("\nSTARTING NORMAL TRAINING")
     # Instantiate SGD optimizer with input learning rate, momentum and weight_decay
     optimizer = SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
 
@@ -62,11 +67,16 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
             # idx(index of sample in the original dataset)
             # We are interested in all of them except for idx which is never used.
             x, x_bar, label = x.to(device), x_bar.to(device), label.to(device)
-
-            # Output1, Output2 and feat are the results of Head1, Head2, and features-layer4 for the base samples
-            output1, output2, feat = model([x, label])  # Outputs of the two heads are each (128,5)
-            # Output1_bar, Output2_bar are the results of Head1, Head2, and features-layer4 for the augmented samples
-            output1_bar, output2_bar, _ = model([x_bar, label])  # getting output of 2 heads
+            if tSNE:
+                # Output1, Output2 and feat are the results of Head1, Head2, and features-layer4 for the base samples
+                output1, output2, feat = model([x, label])  # Outputs of the two heads are each (128,5)
+                # Output1_bar, Output2_bar are the results of Head1, Head2, and features-layer4 for the augmented samples
+                output1_bar, output2_bar, _ = model([x_bar, label])  # getting output of 2 heads
+            else:
+                # Output1, Output2 and feat are the results of Head1, Head2, and features-layer4 for the base samples
+                output1, output2, feat = model(x)  # Outputs of the two heads are each (128,5)
+                # Output1_bar, Output2_bar are the results of Head1, Head2, and features-layer4 for the augmented samples
+                output1_bar, output2_bar, _ = model(x_bar)  # getting output of 2 heads
 
             # Apply softmax on all the computed outputs to turn everything into probabilities
             prob1, prob1_bar, prob2, prob2_bar = F.softmax(output1, dim=1), F.softmax(output1_bar, dim=1), \
@@ -208,17 +218,19 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
         exp_lr_scheduler.step()
 
         # Print the result of the training procedure over that epoch
-        print('Train Epoch: {} Avg Loss: {:.4f}'.format(epoch, loss_record.avg))
+        print('Train EPOCH: {} Avg Loss: {:.4f}'.format(epoch, loss_record.avg))
 
         # Set the head argument to 'head1', this to ensure that we test the supervised head in the training step below
-        print('\ttest on labeled classes')
+        print('Test on labeled classes')
         args.head = 'head1'
         acc_H1, nmi_H1, ari_H1, acc_testing_H1 = test(model, labeled_eval_loader, '_', args)
 
         # Set the head argument to 'head2', this to ensure that we test the unsupervised head in the training step below
-        print('\ttest on unlabeled classes')
+        print('Test on unlabeled classes')
         args.head = 'head2'
         acc_H2, nmi_H2, ari_H2, _ = test(model, unlabeled_eval_loader, '_', args)
+        print('\n')
+
         # Print the result of the testing procedure obtained computing the three metrics above
         if logging_on:
             wandb.log({"epoch": epoch, "Total_average_loss": loss_record.avg, "Cross_entropy_loss": loss_record_CEL.avg,
@@ -234,7 +246,7 @@ def train(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args)
 
 
 def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, args):
-    print("STARTING INCREMENTAL-LEARNING TRAINING")
+    print("\nSTARTING INCREMENTAL-LEARNING TRAINING")
     optimizer = SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
     exp_lr_scheduler = lr_scheduler.StepLR(optimizer, step_size=args.step_size, gamma=args.gamma)
     criterion1 = nn.CrossEntropyLoss()
@@ -253,8 +265,13 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
         w = args.rampup_coefficient * ramps.sigmoid_rampup(epoch, args.rampup_length)
         for batch_idx, ((x, x_bar), label, idx) in enumerate(tqdm(train_loader)):
             x, x_bar, label = x.to(device), x_bar.to(device), label.to(device)
-            output1, output2, feat = model([x, label])
-            output1_bar, output2_bar, _ = model([x_bar, label])
+            if tSNE:
+                output1, output2, feat = model([x, label])
+                output1_bar, output2_bar, _ = model([x_bar, label])
+            else:
+                output1, output2, feat = model(x)
+                output1_bar, output2_bar, _ = model(x_bar)
+
             prob1, prob1_bar, prob2, prob2_bar = F.softmax(output1, dim=1), F.softmax(output1_bar, dim=1), F.softmax(
                 output2, dim=1), F.softmax(output2_bar, dim=1)
             # we transfer them to probabilities
@@ -311,13 +328,14 @@ def train_IL(model, train_loader, labeled_eval_loader, unlabeled_eval_loader, ar
             loss.backward()
             optimizer.step()
         exp_lr_scheduler.step()
-        print('Train Epoch: {} Avg Loss: {:.4f}'.format(epoch, loss_record.avg))
-        print('\ttest on labeled classes')
+        print('Train EPOCH: {} Avg Loss: {:.4f}'.format(epoch, loss_record.avg))
+        print('Test on labeled classes')
         args.head = 'head1'
         acc_H1, nmi_H1, ari_H1, acc_testing_H1 = test(model, labeled_eval_loader, '_', args)
-        print('\ttest on unlabeled classes')
+        print('Test on unlabeled classes')
         args.head = 'head2'
         acc_H2, nmi_H2, ari_H2, _ = test(model, unlabeled_eval_loader, '_', args)
+        print('\n')
         if logging_on:
             wandb.log({"epoch": epoch, "Total_average_loss": loss_record.avg, "Cross_entropy_loss": loss_record_CEL.avg,
                        "Binary_cross_entropy_loss": loss_record_BCE.avg,
@@ -349,7 +367,10 @@ def test(model, test_loader, plot_name, args):
 
         # Output 1, Output2 and Output3 are the results of Head1, Head2, and features-layer4 respectively, we take the
         # outputs of the two heads since we are interested in testing the accuracy of one of the two
-        output1, output2, _ = model([x, label])
+        if tSNE:
+            output1, output2, _ = model([x, label])
+        else:
+            output1, output2, _ = model(x)
 
         # If the argument head is 'head1' then we take as final output the result of the supervised head
         if args.head == 'head1':
@@ -373,8 +394,7 @@ def test(model, test_loader, plot_name, args):
             acc_testing = 0
         targets = np.append(targets, label.cpu().numpy())
         preds = np.append(preds, pred.cpu().numpy())
-    
-    tSNE = False
+
     if tSNE:
         # Get the feature label dataframe
         model.get_feature_label_dataframe(print_df=True)
@@ -391,7 +411,7 @@ def test(model, test_loader, plot_name, args):
     # Compute the accuracy metrics for the current test step, see supervised_learning.py for full explanation
     acc, nmi, ari = cluster_acc(targets.astype(int), preds.astype(int)), nmi_score(targets, preds), ari_score(targets,
                                                                                                               preds)
-    print('\tTest cluster acc {:.4f}, nmi {:.4f}, ari {:.4f}, test accuracy {:.4f}'.format(acc, nmi, ari, acc_record.avg))
+    print('Test cluster acc {:.4f}, nmi {:.4f}, ari {:.4f}, test accuracy {:.4f}'.format(acc, nmi, ari, acc_record.avg))
     return acc, nmi, ari, acc_record.avg
 
 
@@ -422,7 +442,7 @@ if __name__ == "__main__":
     parser.add_argument('--dataset_name', type=str, default='cifar10', help='options: cifar10, cifar100, svhn')  # Name of the used dataset
     parser.add_argument('--seed', default=1, type=int)  # Seed to use
     parser.add_argument('--mode', type=str, default='train')  # Mode: train or test
-    logging_on = True  # Variable to stop logging when we do not want to log anything
+    logging_on = False  # Variable to stop logging when we do not want to log anything
 
     # Extract the args and make them available in the args object
     args = parser.parse_args()
@@ -441,28 +461,21 @@ if __name__ == "__main__":
     # Define the name of the path to save the trained model
     args.model_dir = model_dir + '/' + '{}.pth'.format(args.model_name)
 
-    # Build a new directory for the tSNE plots of the current tested model
-    partial_plot_path = str('tSNE_plots/' + args.model_name)
-    if not os.path.exists(partial_plot_path):
-        os.makedirs(partial_plot_path)
+    if tSNE:
+        # Build a new directory for the tSNE plots of the current tested model
+        partial_plot_path = str('tSNE_plots/' + args.model_name)
+        if not os.path.exists(partial_plot_path):
+            os.makedirs(partial_plot_path)
 
     # Choose which ResNet architecture we want to run
     New_resnet = False
     if New_resnet:
         # Initialize the New ResNet architecture (original resnet no changes) and also the BasicBlock. Then send cuda
         model = resnet_sim(args.num_labeled_classes, args.num_unlabeled_classes).to(device)
-        # TODO: Write the correct options here
-        # Use one of the following command lines from console to run the old architecture with the selected SSL:
-        # Use the following command line from console to run the old architecture:# CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10_tSNE.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_Barlow_twins_2.pth resnet_IL_cifar10_Barlow_twins_2
-        # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10_tSNE.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_new_config.pth resnet_IL_cifar10_new_config
-        # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10_tSNE.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_simsam_2.pth resnet_IL_cifar10_simsam_2
 
     else:
         # Initialize the old ResNet architecture (changed from the authors) and also the BasicBlock. Then Send cuda
         model = ResNet(BasicBlock, [2, 2, 2, 2], args.num_labeled_classes, args.num_unlabeled_classes).to(device)
-        # TODO: Write the correct option here
-        # Use the following command line from console to run the old architecture:
-        # CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10_tSNE.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_cifar10_basicconfig.pth resnet_IL_cifar10_basic_config
 
     # Default inputs assume that we are working with 10 classes of which: 5 classes unlabeled 5 classes labeled.
     # We have two heads in this ResNet model, head1 for the labeled and head2 for the unlabeled data.
