@@ -148,7 +148,7 @@ To run your own unbalanced experiment, follow the ensuing procedure:
    CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_no_IL_cifar10_tSNE_unbalanced.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/unbalanced_supervised_learning/name_of_you_input_model.pth name_of_your_output_model
 ```
 
-6. Your trained model weights will be stored in data/experiments/unbalanced_auto_novel_for_tSNE/name_of_your_output_model.pth
+6. Your trained model weights will be stored in ``data/experiments/unbalanced_auto_novel_for_tSNE/name_of_your_output_model.pth``
 
 ## Plotting t-SNE for any experiment 
 The t-distributed Stochastic Neighbor Embedding is a statistical tool that allows to represent high dimensional samples into a low dimensional space relying on a statistical algorithm. Due to its stochastic nature this algorithm leads to different output for each run, also if the input data and the used parameters are exactly the same.
