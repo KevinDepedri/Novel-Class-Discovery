@@ -14,6 +14,7 @@ python unbalanced_auto_novel_for_tSNE.py \
         --rampup_length 50 \
         --rampup_coefficient 5.0 \
         --dataset_name cifar10 \
+        --IL \
         --increment_coefficient 0.05 \
         --seed 0 \
         --mode train \
