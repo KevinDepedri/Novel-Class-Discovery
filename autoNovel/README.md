@@ -150,7 +150,7 @@ To run your own unbalanced experiment, follow the ensuing procedure:
 
 2. Open the file ``unbalanced_supervised_learning.py``
    - At line 185 change the default value of ``rotnet_dir`` with the path where your trained SSL-model weights are stored
-   - At line 191 turn ``logging_on`` to True if you need to log the data to WadnB, otherwise turn it to False
+   - At line 191 turn ``logging_on`` to True if you need to log the data to WandB, otherwise turn it to False
    - At line 225 turn ``New_SSL_methods`` to True if you have used a different SSL techinque (see Experiment 1)
    - At line 226 turn ``New_Resnet_config`` to True if you used a standard ResNet, let it to false if you used the ResNet defined by the authors
    - At line 314 turn ``unbalanced`` to True to use the unbalanced version CustomCIFAR10
@@ -163,7 +163,7 @@ To run your own unbalanced experiment, follow the ensuing procedure:
 
 4. Open the file ``unabalanced_auto_novel_for_tSNE.py``
    - At line 22 check that ``tSNE`` is set to False
-   - At line 445 turn ``logging_on`` to True if you need to log the data to WadnB, otherwise turn it to False
+   - At line 445 turn ``logging_on`` to True if you need to log the data to WandB, otherwise turn it to False
    - At line 471 turn ``New_Resnet`` to True if you used a standard ResNet, let it to false if you used the ResNet defined by the authors
    - At line 525 turn ``unbalanced`` to True to use the unbalanced version CustomCIFAR10
    - At line 527 define your own ``remove_dict`` that will be applied to CustomCIFAR10
