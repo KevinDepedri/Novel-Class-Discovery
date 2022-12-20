@@ -146,7 +146,7 @@ The experiment is based on a custom version of the CIFAR10 dataset called Custom
 
 To run your own unbalanced experiment, follow the ensuing procedure:
 
-1. Train your model until the end of the ``selfsupervised_learning-step`` and store the weights of your model. Refer to the ``read-me`` file of the [original git-hub of AutoNovel's authors](https://github.com/k-han/AutoNovel) for the full procedure for SSL
+1. Train your model until the end of the ``selfsupervised_learning-step`` and store the weights of your model. Refer to the ``readme`` file of the [original git-hub of AutoNovel's authors](https://github.com/k-han/AutoNovel) for the full procedure for SSL
 
 2. Open the file ``unbalanced_supervised_learning.py``
    - At line 185 change the default value of ``rotnet_dir`` with the path where your trained SSL-model weights are stored
