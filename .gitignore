@@ -4,3 +4,6 @@ autoNovel/data/experiments
 autoNovel/wandb
 
 autoNovel/trained_models
+testing_thefuture.py
+trial.py
+trying_to_test_mnisit.py
