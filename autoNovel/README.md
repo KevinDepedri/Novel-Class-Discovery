@@ -106,15 +106,37 @@ To test the results obtained by applying different SSL .....
 ## Experiment 2 (Domain Shift)
 ..............
 
-## Experiment 3 (Unbalanced Classes)
+## Experiment 3 (Unbalanced Classes) - Supported only for CIFAR-10
 This experiments allow to train and thest a model using a custom number of samples for each class of CIFAR10.
 
 We performed this experiment to see how the model performs in cases where the number of labeled samples is very low (1/10 of the unlabeled samples), and in the opposite cases, where the number of unlabeled samples is equalt to 1/10 of the labeled samples.
 
-## Plotting t-SNE for any experiment
+## Plotting t-SNE for any experiment 
 The t-distributed Stochastic Neighbor Embedding is a statistical tool that allows to represent high dimensional samples into a low dimensional space relying on a statistical algorithm. Due to its stochastic nature this algorithm leads to different output for each run, also if the input data and the used parameters are exactly the same.
 
 We used the t-SNE plots to show how much the features learned by our models are effective. They allow us to see how the samples belonging to different categories are clustered. Ideally, we would like to see compact cluster well distatiented between them. This condition would point that our model learn some good features which allows to distinguish between samples coming from different classes in an efficient way.
 
+To plot the t-SNE for your model follow the ensuing procedure (steps using CIFAR-10):
 
+1. Train your model until the end of the 'AutoNovel-step' and store the weights of your model
 
+2. Open the file ``auto_novel_for_tSNE.py``
+   - If your model has been trained using the ResNet defined by the authors, then be sure that at line 448 the parameter ``New_resnet = False``
+   - If your model has been trained using a standard ResNet, then be sure that at line 448 the parameter ``New_resnet = True``
+
+3. Put the weights of your model into the path ``data/experiments/auto_novel_for_tSNE/name_of_you_model.pth``
+
+4. Depending on the Incremental-Learning (IL) setting that you used to train your trained your model:
+   - A (IL enabled): run ``auto_novel_IL_cifar10_tSNE.sh`` through cmd using the following line of code (change the parameter ``name_of_you_model``):
+```shell
+   CUDA_VISIBLE_DEVICES=0 sh ``scripts/auto_novel_IL_cifar10_tSNE.sh`` ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth name_of_you_model
+```
+
+   - B (IL disabled): run auto_novel_no_IL_cifar10_tSNE through cmd using the following line of code (change the parameter ``name_of_you_model``):
+```shell
+   CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_no_IL_cifar10_tSNE.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth name_of_you_model 
+```
+   
+5. The produced plots will be stored in the folder ``tSNE_plots/name_of_you_model``
+
+6. If you are working on a dataset different from CIFAR-10, or if other changes have been applied on the training procedure, then apply the due changes also to the py file ``auto_novel_for_tSNE.py`` and to the lunch sh file ``auto_novel_IL_cifar10_tSNE.sh`` or ``auto_novel_no_IL_cifar10_tSNE.sh``
