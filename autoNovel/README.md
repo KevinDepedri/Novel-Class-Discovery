@@ -126,13 +126,13 @@ To plot the t-SNE for your model follow the ensuing procedure (steps using CIFAR
 
 3. Put the weights of your model into the path ``data/experiments/auto_novel_for_tSNE/name_of_you_model.pth``
 
-4. Depending on the Incremental-Learning (IL) setting that you used to train your trained your model:
-   - A (IL enabled): run ``auto_novel_IL_cifar10_tSNE.sh`` through cmd using the following line of code (change the parameter ``name_of_you_model``):
+4. Depending on the Incremental-Learning (IL) setting that you used to train your model:
+- If IL enabled -> run ``auto_novel_IL_cifar10_tSNE.sh`` through cmd using the following line of code (change the parameter ``name_of_you_model``):
 ```shell
    CUDA_VISIBLE_DEVICES=0 sh ``scripts/auto_novel_IL_cifar10_tSNE.sh`` ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth name_of_you_model
 ```
 
-   - B (IL disabled): run auto_novel_no_IL_cifar10_tSNE through cmd using the following line of code (change the parameter ``name_of_you_model``):
+- If IL disabled -> run ``auto_novel_no_IL_cifar10_tSNE`` through cmd using the following line of code (change the parameter ``name_of_you_model``):
 ```shell
    CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_no_IL_cifar10_tSNE.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth name_of_you_model 
 ```
