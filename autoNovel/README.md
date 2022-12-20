@@ -98,3 +98,23 @@ year      = {2020}
 }
 ```
 
+# AutoNovel experiments
+
+## Experiment 1 (Using different SSL techniques)
+To test the results obtained by applying different SSL .....
+
+## Experiment 2 (Domain Shift)
+..............
+
+## Experiment 3 (Unbalanced Classes)
+This experiments allow to train and thest a model using a custom number of samples for each class of CIFAR10.
+
+We performed this experiment to see how the model performs in cases where the number of labeled samples is very low (1/10 of the unlabeled samples), and in the opposite cases, where the number of unlabeled samples is equalt to 1/10 of the labeled samples.
+
+## Plotting t-SNE for any experiment
+The t-distributed Stochastic Neighbor Embedding is a statistical tool that allows to represent high dimensional samples into a low dimensional space relying on a statistical algorithm. Due to its stochastic nature this algorithm leads to different output for each run, also if the input data and the used parameters are exactly the same.
+
+We used the t-SNE plots to show how much the features learned by our models are effective. They allow us to see how the samples belonging to different categories are clustered. Ideally, we would like to see compact cluster well distatiented between them. This condition would point that our model learn some good features which allows to distinguish between samples coming from different classes in an efficient way.
+
+
+
