@@ -46,7 +46,6 @@ Our code for step of self supervised learning is based on the official code of t
    
    ```
 
-   
 
 ## Step 2: Joint training for novel category discovery
 
@@ -55,7 +54,6 @@ Our code for step of self supervised learning is based on the official code of t
 ```shell
 # Train on CIFAR10
 CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_cifar10.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth
-CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth resnet_IL_cifar10_bce
 
 # Train on CIFAR100
 CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_cifar100.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar100.pth
@@ -98,13 +96,33 @@ year      = {2020}
 }
 ```
 
-# AutoNovel experiments
+# AutoNovel experiments that require clarification on how it was run
 
 ## Experiment 1 (Using different SSL techniques)
-To test the results obtained by applying different SSL .....
+We are mainly trying to use different SSL methods used by [solo-learn](https://github.com/vturrisi/solo-learn) . We load the weights of different methods and accordingly start re training from step 2 and step 3.
+
+1. run the following command to download the weights
+
+```bash
+sh load_SSL_weights.sh
+```
+
+2. open supervised_learning.py and you will find the following SSL method (Barlow_twins, simsiam, supcon, swav, vibcreg, vicreg, wmse)
+3. There is 2 flags called **New_SSL_methods** and **New_Resnet_config** at line 229,230. 
+   1. New_SSL_methods : When you set it to true you are allowed to work other SSL methods other than rotnet. Setting it to false automatically indicate that you are running with rotnet.
+   2. New_Resnet_config : This flag is mainly used to indicate if you should use the Autonovel Resnet or Resnet architecture similar to solo learn. We mainly saw that there is a difference in the performance of both. When you load the any of the Sololearn methods, we automatically use the similar Resnet architecture. When we are using rotnet, we leave it to the user to decide what to do. Setting to False means that we are using the Autonovel Resnet architecture.
+4. Set variable called **ssl**  in line 237 to one of these keys (Barlow_twins, simsiam, supcon, swav, vibcreg, vicreg, wmse) to indicate what method of SSL to use.
+5. Train the Autonovel step normal but remember to load the right weight files.
 
 ## Experiment 2 (Domain Shift)
-..............
+
+### Cifar-10 with domain shift experiment
+
+Jaccopo missing in here
+
+### Mnist with domain shift experiment
+
+
 
 ## Experiment 3 (Unbalanced Classes) - Supported only for CIFAR-10
 This experiment allows to train and test a model using a custom number of samples for each class of CIFAR10.
@@ -175,7 +193,7 @@ To plot the t-SNE for your model follow the ensuing procedure (steps using CIFAR
 ```shell
    CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_no_IL_cifar10_tSNE.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth name_of_you_model 
 ```
-   
+
 5. The produced plots will be stored in the folder ``tSNE_plots/name_of_you_model``
 
 6. If you are working on a dataset different from CIFAR-10, or if other changes have been applied on the training procedure, then apply the due changes also to the py file ``auto_novel_for_tSNE.py`` and to the lunch sh file ``auto_novel_IL_cifar10_tSNE.sh`` or ``auto_novel_no_IL_cifar10_tSNE.sh``

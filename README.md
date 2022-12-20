@@ -5,5 +5,6 @@ This is a list of implementation for different methods for Novel class discovery
 We mainly work with the following methods:
 
 * AutoNovel
+* UNO
 
 ****
