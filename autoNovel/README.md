@@ -70,6 +70,8 @@ To train in the Incremental Learning (IL) mode, replace ``auto_novel_{cifar10, c
 
 To run our code in evaluation mode, set the `--mode` to `test`. 
 
+**Please remember to set     logging_on = True parameter to false when evaluating the model or else it will make an error.**
+
 ```shell
 # For CIFAR10
 CUDA_VISIBLE_DEVICES=0 python auto_novel.py --mode test --dataset_name cifar10 --model_name resnet_cifar10 --exp_root ./data/experiments/pretrained/
@@ -104,7 +106,7 @@ We are mainly trying to use different SSL methods used by [solo-learn](https://g
 1. run the following command to download the weights
 
 ```bash
-sh load_SSL_weights.sh
+sh scripts/load_SSL_weights.sh
 ```
 
 2. open supervised_learning.py and you will find the following SSL method (Barlow_twins, simsiam, supcon, swav, vibcreg, vicreg, wmse)
@@ -122,7 +124,18 @@ Jaccopo missing in here
 
 ### Mnist with domain shift experiment
 
-1. 
+1. The dataset will be automatically downloaded by running the code. The main problem in here is that you need to retrain the 3 steps to be able to work with these stuff. You can download our weights using script called "download_mnisit_weights.sh". Use this command to download the weights
+
+   ```bash
+   sh scripts/download_mnisit_weights.sh
+   ```
+
+   
+
+2. Passing the dataset_name should be enought to allow you to use the Mnist or Mnisit mixed dataset
+
+   1. Passing "mnisit" leads to load the mnist dataset containing the first 5 classes from the normal mnist and the second 5 classes from the mnist-m dataset.
+   2. Passing "mnisit_base" lead to loading the full mnist dataset containing all the 10 classes. This can be used as baseline. 
 
 ## Experiment 3 (Unbalanced Classes) - Supported only for CIFAR-10
 This experiment allows to train and test a model using a custom number of samples for each class of CIFAR10.

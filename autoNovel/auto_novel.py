@@ -567,7 +567,7 @@ if __name__ == "__main__":
         all_eval_loader = MNISITLoader(batch_size=args.batch_size, split='test', aug=None,
                                      shuffle=False,catego='labeled', number_of_classes=10)
     # CUDA_VISIBLE_DEVICES=0 sh scripts/autonovel_IL_mnisit_mix.sh ./data/datasets/MNISIT/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_mnisit_MIX.pth resnet_IL_minsiit_mix mnisit
-    elif args.dataset_name == 'mnisit_baseline':
+    elif args.dataset_name == 'mnisit_base':
         print(args.dataset_name)
         mix_train_loader = MNISITLoaderMix_main(batch_size=args.batch_size, split='train', aug='twice',
                                          shuffle=True,catego='labeled', number_of_classes=10)
