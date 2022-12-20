@@ -60,7 +60,7 @@ class GenericDataset_mnisit(data.Dataset):
             
             transform.append(lambda x: np.asarray(x))
             self.transform = transforms.Compose(transform)
-            self.data =MNIST_DS( 'data/datasets/MNISIT/',train=split=="train",download=False, transform=self.transform)
+            self.data =MNIST_DS( 'data/datasets/MNISIT/',train=split=="train",download=True, transform=self.transform)
             flag=(self.data.targets<5).nonzero().squeeze(-1)
             self.data = torch.utils.data.Subset(self.data, flag)
         elif self.dataset_name == 'mnisitm':            
@@ -76,7 +76,7 @@ class GenericDataset_mnisit(data.Dataset):
             
             transform.append(lambda x: np.asarray(x))
             self.transform = transforms.Compose(transform)
-            self.data =MNISTM('data/datasets/MNISIT_M/', download=False, train=split=="train", transform=self.transform)
+            self.data =MNISTM('data/datasets/MNISIT_M/', download=True, train=split=="train", transform=self.transform)
             flag=(self.data.targets>=5).nonzero().squeeze(-1)
             self.data = torch.utils.data.Subset(self.data, flag)
         else:

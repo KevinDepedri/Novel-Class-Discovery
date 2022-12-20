@@ -98,6 +98,9 @@ class MNISTM(VisionDataset):
 
     def download(self):
         """Download the MNIST-M data."""
+        
+        if self._check_exists():
+            return
         raw_folder  =   ['data/datasets/MNISIT_M/mnist_m_train.pt.tar.gz',
                         'data/datasets/MNISIT_M/mnist_m_test.pt.tar.gz']
     

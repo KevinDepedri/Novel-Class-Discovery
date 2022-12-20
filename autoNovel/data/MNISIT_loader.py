@@ -13,11 +13,11 @@ class MNISIT_MIX(data.Dataset):
     def __init__(self, dataset_name, split, transform):
         self.dataset_name = dataset_name
         if self.dataset_name == 'mnisit':
-            self.data =MNIST_DS( 'data/datasets/MNISIT/',train=split=="train",download=False, transform=transform)
+            self.data =MNIST_DS( 'data/datasets/MNISIT/',train=split=="train",download=True, transform=transform)
             flag=(self.data.targets<5).nonzero().squeeze(-1)
             self.data = torch.utils.data.Subset(self.data, flag)
         elif self.dataset_name == 'mnisitm':            
-            self.data =MNISTM('data/datasets/MNISIT_M/', download=False, train=split=="train", transform=transform)
+            self.data =MNISTM('data/datasets/MNISIT_M/', download=True, train=split=="train", transform=transform)
             flag=(self.data.targets>=5).nonzero().squeeze(-1)
             self.data = torch.utils.data.Subset(self.data, flag)
         else:
@@ -74,11 +74,11 @@ class MNISIT_main(data.Dataset):
     def __init__(self, dataset_name, split, transform):
         self.dataset_name = dataset_name
         if self.dataset_name == 'labeled':
-            self.data =MNIST_DS( 'data/datasets/MNISIT/',train=split=="train",download=False, transform=transform)
+            self.data =MNIST_DS( 'data/datasets/MNISIT/',train=split=="train",download=True, transform=transform)
             flag=(self.data.targets<5).nonzero().squeeze(-1)
             self.data = torch.utils.data.Subset(self.data, flag)
         elif self.dataset_name == 'unlabeled':            
-            self.data =MNIST_DS('data/datasets/MNISIT/', download=False, train=split=="train", transform=transform)
+            self.data =MNIST_DS('data/datasets/MNISIT/', download=True, train=split=="train", transform=transform)
             flag=(self.data.targets>=5).nonzero().squeeze(-1)
             self.data = torch.utils.data.Subset(self.data, flag)
         else:

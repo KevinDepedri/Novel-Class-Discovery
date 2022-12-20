@@ -60,7 +60,7 @@ class GenericDataset_mnisit_basline(data.Dataset):
             
             transform.append(lambda x: np.asarray(x))
             self.transform = transforms.Compose(transform)
-            self.data =MNIST_DS( 'data/datasets/MNISIT/',train=split=="train",download=False, transform=self.transform)
+            self.data =MNIST_DS( 'data/datasets/MNISIT/',train=split=="train",download=True, transform=self.transform)
         else:
                 raise ValueError('Not recognized dataset {0}'.format(dataset_name))
     def __getitem__(self, index):

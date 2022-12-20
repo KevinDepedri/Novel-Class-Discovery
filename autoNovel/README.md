@@ -122,7 +122,7 @@ Jaccopo missing in here
 
 ### Mnist with domain shift experiment
 
-
+1. 
 
 ## Experiment 3 (Unbalanced Classes) - Supported only for CIFAR-10
 This experiment allows to train and test a model using a custom number of samples for each class of CIFAR10.

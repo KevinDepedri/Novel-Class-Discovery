@@ -42,7 +42,7 @@ class MNIST_DS(VisionDataset):
 
         self.train = train
         if download:
-            self.download()
+                self.download()
 
         if not self._check_exists():
             raise RuntimeError("Dataset not found." +
@@ -83,6 +83,9 @@ class MNIST_DS(VisionDataset):
                 os.path.exists(os.path.join('data/datasets/MNISIT/', self.test_file)))
     def download(self):
         """Download the MNIST data."""
+        
+        if self._check_exists():
+            return
         raw_folder  =   ['data/datasets/MNISIT/train-images-idx3-ubyte.gz',
                             'data/datasets/MNISIT/train-labels-idx1-ubyte.gz',
                             'data/datasets/MNISIT/t10k-images-idx3-ubyte.gz',
