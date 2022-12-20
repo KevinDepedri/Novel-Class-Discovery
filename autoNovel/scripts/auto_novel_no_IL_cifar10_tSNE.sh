@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-python unbalanced_auto_novel_for_tSNE.py \
+python auto_novel_for_tSNE.py \
         --dataset_root $1 \
         --exp_root $2 \
         --warmup_model_dir $3 \
@@ -14,8 +14,7 @@ python unbalanced_auto_novel_for_tSNE.py \
         --rampup_length 50 \
         --rampup_coefficient 5.0 \
         --dataset_name cifar10 \
-        --IL \
         --increment_coefficient 0.05 \
         --seed 0 \
-        --mode train \
+        --mode test \
         --topk 5
