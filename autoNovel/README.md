@@ -146,35 +146,35 @@ The experiment is based on a custom version of the CIFAR10 dataset called Custom
 
 To run your own unbalanced experiment, follow the ensuing procedure:
 
-1. Train your model until the end of the ``selfsupervised_learning-step`` and store the weights of your model. Refer to ``read-me`` file of the [original git-hub of AutoNovel's authors](https://github.com/k-han/AutoNovel) for the full procedure for SSL)
+1. Train your model until the end of the ``selfsupervised_learning-step`` and store the weights of your model. Refer to the ``readme`` file of the [original git-hub of AutoNovel's authors](https://github.com/k-han/AutoNovel) for the full procedure for SSL
 
 2. Open the file ``unbalanced_supervised_learning.py``
    - At line 185 change the default value of ``rotnet_dir`` with the path where your trained SSL-model weights are stored
-   - At line 191 turn ``logging_on`` to True if you need to log the data to WadnB or not, otherwise turn it to False
+   - At line 191 turn ``logging_on`` to True if you need to log the data to WandB, otherwise turn it to False
    - At line 225 turn ``New_SSL_methods`` to True if you have used a different SSL techinque (see Experiment 1)
    - At line 226 turn ``New_Resnet_config`` to True if you used a standard ResNet, let it to false if you used the ResNet defined by the authors
    - At line 314 turn ``unbalanced`` to True to use the unbalanced version CustomCIFAR10
-   - At line 316 give define your own ``remove_dict`` that will be applied to CustomCIFAR10
+   - At line 316 define your own ``remove_dict`` that will be applied to CustomCIFAR10
 
-3. From cmd run the following line of code to perform the supervised_learning (change the parameter ``name_of_you_model`` with the name that we want for the output model weights):
+3. From cmd run the following line of code to perform the supervised_learning (change the parameter ``name_of_your_output_model`` with the name that you want for the output model weights):
 ```shell
-   CUDA_VISIBLE_DEVICES=0 python unbalanced_supervised_learning.py --dataset_name cifar10 --model_name name_of_you_model
+   CUDA_VISIBLE_DEVICES=0 python unbalanced_supervised_learning.py --dataset_name cifar10 --model_name name_of_your_output_model
 ```
 
 4. Open the file ``unabalanced_auto_novel_for_tSNE.py``
    - At line 22 check that ``tSNE`` is set to False
-   - At line 445 turn ``logging_on`` to True if you need to log the data to WadnB or not, otherwise turn it to False
+   - At line 445 turn ``logging_on`` to True if you need to log the data to WandB, otherwise turn it to False
    - At line 471 turn ``New_Resnet`` to True if you used a standard ResNet, let it to false if you used the ResNet defined by the authors
    - At line 525 turn ``unbalanced`` to True to use the unbalanced version CustomCIFAR10
-   - At line 527 give define your own ``remove_dict`` that will be applied to CustomCIFAR10
+   - At line 527 define your own ``remove_dict`` that will be applied to CustomCIFAR10
 
 5. Depending on the Incremental-Learning (IL) setting that you want to use to train your model:
-- If IL enabled -> run ``auto_novel_IL_cifar10_tSNE_unbalanced.sh`` through cmd using the following line of code (change the parameter ``name_of_you_model`` with the name of the model weights that you want to load):
+- If IL enabled -> run ``auto_novel_IL_cifar10_tSNE_unbalanced.sh`` through cmd using the following line of code (change the parameters ``name_of_you_input_model`` and ``name_of_your_output_model``):
 ```shell
-   CUDA_VISIBLE_DEVICES=0 sh ``scripts/auto_novel_IL_cifar10_tSNE_unbalanced.sh`` ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/unbalanced_supervised_learning/name_of_you_input_model.pth name_of_your_output_model
+   CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10_tSNE_unbalanced.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/unbalanced_supervised_learning/name_of_you_input_model.pth name_of_your_output_model
 ```
 
-- If IL disabled -> run ``auto_novel_no_IL_cifar10_tSNE_unbalanced`` through cmd using the following line of code (change the parameter ``name_of_you_model`` with the name of the model weights that you want to load):
+- If IL disabled -> run ``auto_novel_no_IL_cifar10_tSNE_unbalanced`` through cmd using the following line of code change the parameters ``name_of_you_input_model`` and ``name_of_your_output_model``):
 ```shell
    CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_no_IL_cifar10_tSNE_unbalanced.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/unbalanced_supervised_learning/name_of_you_input_model.pth name_of_your_output_model
 ```
@@ -190,21 +190,21 @@ To plot the t-SNE for your model follow the ensuing procedure (steps using CIFAR
 
 1. Train your model until the end of the ``AutoNovel-step`` and store the weights of your model
 
-2. Put the weights of your model into the path ``data/experiments/auto_novel_for_tSNE/name_of_you_model.pth``
+2. Put the weights of your model into the path ``data/experiments/auto_novel_for_tSNE/name_of_your_input_model.pth``
 
 3. Open the file ``auto_novel_for_tSNE.py``
    - If your model has been trained using the ResNet defined by the authors, then be sure that at line 448 the parameter ``New_resnet = False``
    - If your model has been trained using a standard ResNet, then be sure that at line 448 the parameter ``New_resnet = True``
 
 4. Depending on the Incremental-Learning (IL) setting that you used to train your model:
-- If IL enabled -> run ``auto_novel_IL_cifar10_tSNE.sh`` through cmd using the following line of code (change the parameter ``name_of_you_model`` with the name of the model weights that you want to load):
+- If IL enabled -> run ``auto_novel_IL_cifar10_tSNE.sh`` through cmd using the following line of code (change the parameter ``name_of_your_input_model`` with the name of the model weights that you want to load from ``data/experiments/auto_novel_for_tSNE``):
 ```shell
-   CUDA_VISIBLE_DEVICES=0 sh ``scripts/auto_novel_IL_cifar10_tSNE.sh`` ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth name_of_you_model
+   CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10_tSNE.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth name_of_your_input_model
 ```
 
-- If IL disabled -> run ``auto_novel_no_IL_cifar10_tSNE`` through cmd using the following line of code (change the parameter ``name_of_you_model`` with the name of the model weights that you want to load):
+- If IL disabled -> run ``auto_novel_no_IL_cifar10_tSNE`` through cmd using the following line of code(change the parameter ``name_of_your_input_model`` with the name of the model weights that you want to load from ``data/experiments/auto_novel_for_tSNE``):
 ```shell
-   CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_no_IL_cifar10_tSNE.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth name_of_you_model 
+   CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_no_IL_cifar10_tSNE.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth name_of_your_input_model 
 ```
 
 5. The produced plots will be stored in the folder ``tSNE_plots/name_of_you_model``
