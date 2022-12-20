@@ -52,7 +52,6 @@ class MNIST_DS(VisionDataset):
         else:
             data_file = self.test_file
         self.data, self.targets = torch.load(os.path.join('data/datasets/MNISIT/', data_file))
-        os.path.join('data/datasets/MNISIT_M/', data_file)
     def __getitem__(self, index):
         """Get images and target for data loader.
         Args:
