@@ -190,23 +190,16 @@ To plot the t-SNE for your model follow the ensuing procedure (steps using CIFAR
 
 1. Train your model until the end of the ``AutoNovel-step`` and store the weights of your model
 
-2. Put the weights of your model into the path ``data/experiments/auto_novel_for_tSNE/name_of_your_input_model.pth``
+2. Put the weights of your model into the path ``data/experiments/auto_novel_tSNE_plot/name_of_your_input_model.pth``
 
-3. Open the file ``auto_novel_for_tSNE.py``
-   - If your model has been trained using the ResNet defined by the authors, then be sure that at line 448 the parameter ``New_resnet = False``
-   - If your model has been trained using a standard ResNet, then be sure that at line 448 the parameter ``New_resnet = True``
+3. To start the generation of the t-SNE plots you will need to use the following command line from cmd (change the parameter ``name_of_your_input_model`` with the name of the model weights that you want to load from ``data/experiments/auto_novel_tSNE_plot``):
+   ```shell
+   CUDA_VISIBLE_DEVICES=0 python auto_novel_tSNE_plot.py --input_model_name name_of_your_input_model --new_resnet --IL 
+   ```
+   The two flags (``--new_resnet`` and ``--IL``) are used to turn on the respective options
+      - Do not use the flag ``--new_resnet`` if your model has been trained using the ResNet defined by the AutoNovel authors. Use that flag if your model has been trained using a standard ResNet (as from ResNet original paper)
+      - Use the flag ``--IL`` if your model has been trained in the ``AutoNovel-step`` using Incremental-Learning, otherwise, do not use this flag
 
-4. Depending on the Incremental-Learning (IL) setting that you used to train your model:
-- If IL enabled -> run ``auto_novel_IL_cifar10_tSNE.sh`` through cmd using the following line of code (change the parameter ``name_of_your_input_model`` with the name of the model weights that you want to load from ``data/experiments/auto_novel_for_tSNE``):
-```shell
-   CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10_tSNE.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth name_of_your_input_model
-```
+4. The produced plots will be stored in the folder ``tSNE_plots/name_of_you_model``
 
-- If IL disabled -> run ``auto_novel_no_IL_cifar10_tSNE`` through cmd using the following line of code(change the parameter ``name_of_your_input_model`` with the name of the model weights that you want to load from ``data/experiments/auto_novel_for_tSNE``):
-```shell
-   CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_no_IL_cifar10_tSNE.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/pretrained/supervised_learning/resnet_rotnet_cifar10.pth name_of_your_input_model 
-```
-
-5. The produced plots will be stored in the folder ``tSNE_plots/name_of_you_model``
-
-6. If you are working on a dataset different from CIFAR-10, or if other changes have been applied on the training procedure, then apply the due changes also to the py file ``auto_novel_for_tSNE.py`` and to the lunch sh file ``auto_novel_IL_cifar10_tSNE.sh`` or ``auto_novel_no_IL_cifar10_tSNE.sh``
+5. If you are working on a dataset different from CIFAR-10, or if other changes have been applied on the training procedure, then apply the due changes also to the py file ``auto_novel_tSNE_plot.py``
