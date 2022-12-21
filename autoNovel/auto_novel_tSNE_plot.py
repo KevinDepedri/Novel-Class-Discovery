@@ -84,8 +84,8 @@ if __name__ == "__main__":
     parser.add_argument('--dataset_root', type=str, default='./data/datasets/CIFAR/')  # Dataset root directory
     parser.add_argument('--exp_root', type=str, default='./data/experiments/')  # Directory to save the resulting files
     parser.add_argument('--IL', action='store_true', default=False, help='enable incremental learning')  # Enable/Disable IL
-    parser.add_argument('--new_resnet', action='store_true', default=False, help='enable New-ResNet? or use the one defined by authors?')  # Enable/Disable IL
-    parser.add_argument('--input_model_name', type=str, default='resnet_IL_cifar10')  # Name of the model
+    parser.add_argument('--new_resnet', action='store_true', default=False, help='enable New-ResNet? or use the one defined by authors?')  # Enable/Disable NewResNet
+    parser.add_argument('--input_model_name', type=str, default='resnet_IL_cifar10')  # Name of the input model
     parser.add_argument('--dataset_name', type=str, default='cifar10', help='options: cifar10, cifar100, svhn')  # Name of the used dataset
     parser.add_argument('--seed', default=1, type=int)  # Seed to use
 
