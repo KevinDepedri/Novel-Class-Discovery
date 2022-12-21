@@ -151,7 +151,7 @@ To run your own unbalanced experiment, follow the ensuing procedure:
 2. Open the file ``unbalanced_supervised_learning.py``
    - At line 185 change the default value of ``ssl_weights_dir`` with the path where your trained SSL-model weights are stored
    - At line 191 turn ``logging_on`` to True if you need to log the data to WandB, otherwise check it to be False
-   - At line 224 turn ``New_SSL_methods`` to True if you have used a different SSL techinque (see Experiment 1), in that case, specify at line 235 which model you want to load
+   - At line 224 turn ``New_SSL_methods`` to True if you have used a different SSL techinque (see Experiment 1), in that case, specify at line 235 which model you want to load. Otherwise check it to be False
    - At line 310 verify that ``unbalanced`` is set to True to use the unbalanced version CustomCIFAR10
    - At line 312 define your own ``remove_dict`` that will be applied to CustomCIFAR10
 
