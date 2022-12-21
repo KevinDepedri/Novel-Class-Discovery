@@ -60,6 +60,11 @@ CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_cifar100.sh ./data/datasets/CIFAR/ 
 
 # Train on SVHN
 CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_svhn.sh ./data/datasets/SVHN/ ./data/experiments/ ./data/experiments/pretrained/supervised_learning/resnet_rotnet_svhn.pth
+# Train on mnist_base
+CUDA_VISIBLE_DEVICES=0 sh scripts/autonovel_IL_mnisit_mix.sh ./data/datasets/MNISIT/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_mnisit_baseline.pth resnet_IL_minsiit_baseline mnisit_baseline
+# Train on mnist
+CUDA_VISIBLE_DEVICES=0 sh scripts/autonovel_IL_mnisit_mix.sh ./data/datasets/MNISIT/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_mnisit_MIX.pth resnet_IL_minst_mix mnisit
+
 ```
 
 To train in the Incremental Learning (IL) mode, replace ``auto_novel_{cifar10, cifar100, svhn}.sh`` in the above commands by ``auto_novel_IL_{cifar10, cifar100, svhn}.sh``.
@@ -81,9 +86,13 @@ CUDA_VISIBLE_DEVICES=0 python auto_novel.py --mode test --dataset_name cifar100 
 
 # For SVHN
 CUDA_VISIBLE_DEVICES=0 python auto_novel.py --mode test --dataset_name svhn --model_name resnet_svhn --exp_root ./data/experiments/pretrained/ --dataset_root ./data/datasets/SVHN
+# for mnist
+CUDA_VISIBLE_DEVICES=0 python auto_novel.py --mode test --dataset_name mnisit --model_name resnet_IL_minst_mix --exp_root ./data/experiments/pretrained/
+# for mnist Base
+CUDA_VISIBLE_DEVICES=0 python auto_novel.py --mode test --dataset_name mnisit_baseline --model_name resnet_IL_minsiit_baseline --exp_root ./data/experiments/pretrained/
 ```
 
-To perform the evaluation in the Incremental Learning (IL) mode, add in the above commands the argument ``--IL`` and replace the model name``resnet_{cifar10, cifar100, svhn}`` by ``resnet_IL_{cifar10, cifar100, svhn}``.
+To perform the evaluation in the Incremental Learning (IL) mode, add in the above commands the argument ``--IL`` and replace the model name``resnet_{cifar10, cifar100, svhn, mnisit}`` by ``resnet_IL_{cifar10, cifar100, svhn, mnisit}``.
 
 ### Citation
 
@@ -120,7 +129,7 @@ sh scripts/load_SSL_weights.sh
 
 ### Cifar-10 with domain shift experiment
 
-Jaccopo missing in here
+<span style="color:blue">**Jaccopo missing in here remove me when you are done jaccopo**</span>
 
 ### Mnist with domain shift experiment
 
@@ -136,6 +145,8 @@ Jaccopo missing in here
 
    1. Passing "mnisit" leads to load the mnist dataset containing the first 5 classes from the normal mnist and the second 5 classes from the mnist-m dataset.
    2. Passing "mnisit_base" lead to loading the full mnist dataset containing all the 10 classes. This can be used as baseline. 
+   
+3. you are able to to run the three steps using this code. 
 
 ## Experiment 3 (Unbalanced Classes) - Supported only for CIFAR-10
 This experiment allows to train and test a model using a custom number of samples for each class of CIFAR10.
