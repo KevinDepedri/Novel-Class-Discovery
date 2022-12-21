@@ -149,16 +149,15 @@ To run your own unbalanced experiment, follow the ensuing procedure:
 1. Train your model until the end of the ``selfsupervised_learning-step`` and store the weights of your model. Refer to the ``readme`` file of the [original AutoNovel's authors github](https://github.com/k-han/AutoNovel) for the full procedure to follow for SSL training
 
 2. Open the file ``unbalanced_supervised_learning.py``
-   - At line 185 change the default value of ``ssl_weights_dir`` with the path where your trained SSL-model weights are stored
    - At line 191 turn ``logging_on`` to True if you need to log the data to WandB, otherwise check it to be False
    - At line 224 turn ``New_SSL_methods`` to True if you have used a different SSL techinque (see Experiment 1), in that case, specify at line 235 which model you want to load. Otherwise check it to be False
    - At line 310 verify that ``unbalanced`` is set to True to use the unbalanced version CustomCIFAR10
    - At line 312 define your own ``remove_dict`` that will be applied to CustomCIFAR10
 
 3. From cmd run the following line of code to perform the supervised_learning (change the parameter ``name_of_your_output_model`` with the name that you want for the output model weights):
-```shell
-   CUDA_VISIBLE_DEVICES=0 python unbalanced_supervised_learning.py --ssl_weights_dir ./data/experiments/...../name_of_your_input_model.pth --model_name name_of_your_output_model --new_resnet
-```
+   ```shell
+      CUDA_VISIBLE_DEVICES=0 python unbalanced_supervised_learning.py --ssl_weights_dir ./data/experiments/...../name_of_your_input_model.pth --model_name  name_of_your_output_model --new_resnet
+   ```
    The flag ``new_resnet`` is used to turn on its respective option
       - Do not use the flag ``--new_resnet`` if your model has been trained using the ResNet defined by the AutoNovel authors. Use that flag if your model has been trained using a standard ResNet (as from ResNet original paper)
 
@@ -171,15 +170,15 @@ To run your own unbalanced experiment, follow the ensuing procedure:
    - At line 488 define your own ``remove_dict`` that will be applied to CustomCIFAR10
 
 6. Depending on the Incremental-Learning (IL) setting that you want to use to train your model:
-- If IL enabled -> run ``auto_novel_IL_cifar10_unbalanced.sh`` through cmd using the following line of code (change the parameters ``name_of_your_input_model`` and ``name_of_your_output_model``):
-```shell
-   CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10_unbalanced.sh ./data/experiments/...../name_of_your_input_model.pth name_of_your_output_model
-```
+   - If IL enabled -> run ``auto_novel_IL_cifar10_unbalanced.sh`` through cmd using the following line of code (change the parameters ``name_of_your_input_model`` and ``name_of_your_output_model``):
+   ```shell
+      CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10_unbalanced.sh ./data/experiments/...../name_of_your_input_model.pth name_of_your_output_model
+   ```
 
-- If IL disabled -> run ``auto_novel_cifar10_unbalanced`` through cmd using the following line of code change the parameters ``name_of_your_input_model`` and ``name_of_your_output_model``):
-```shell
-   CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_cifar10_unbalanced.sh ./data/experiments/...../name_of_your_input_model.pth name_of_your_output_model
-```
+   - If IL disabled -> run ``auto_novel_cifar10_unbalanced`` through cmd using the following line of code change the parameters ``name_of_your_input_model`` and ``name_of_your_output_model``):
+   ```shell
+      CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_cifar10_unbalanced.sh ./data/experiments/...../name_of_your_input_model.pth name_of_your_output_model
+   ```
 
 7. Your trained model weights will be stored in ``data/experiments/unbalanced_auto_novel/name_of_your_output_model.pth``
 
