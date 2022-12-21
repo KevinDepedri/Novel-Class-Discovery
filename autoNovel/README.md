@@ -146,40 +146,42 @@ The experiment is based on a custom version of the CIFAR10 dataset called Custom
 
 To run your own unbalanced experiment, follow the ensuing procedure:
 
-1. Train your model until the end of the ``selfsupervised_learning-step`` and store the weights of your model. Refer to the ``readme`` file of the [original git-hub of AutoNovel's authors](https://github.com/k-han/AutoNovel) for the full procedure for SSL
+1. Train your model until the end of the ``selfsupervised_learning-step`` and store the weights of your model. Refer to the ``readme`` file of the [original AutoNovel's authors github](https://github.com/k-han/AutoNovel) for the full procedure to follow for SSL training
 
 2. Open the file ``unbalanced_supervised_learning.py``
-   - At line 185 change the default value of ``rotnet_dir`` with the path where your trained SSL-model weights are stored
-   - At line 191 turn ``logging_on`` to True if you need to log the data to WandB, otherwise turn it to False
-   - At line 225 turn ``New_SSL_methods`` to True if you have used a different SSL techinque (see Experiment 1)
-   - At line 226 turn ``New_Resnet_config`` to True if you used a standard ResNet, let it to false if you used the ResNet defined by the authors
-   - At line 314 turn ``unbalanced`` to True to use the unbalanced version CustomCIFAR10
-   - At line 316 define your own ``remove_dict`` that will be applied to CustomCIFAR10
+   - At line 185 change the default value of ``ssl_weights_dir`` with the path where your trained SSL-model weights are stored
+   - At line 191 turn ``logging_on`` to True if you need to log the data to WandB, otherwise check it to be False
+   - At line 224 turn ``New_SSL_methods`` to True if you have used a different SSL techinque (see Experiment 1), in that case, specify at line 235 which model you want to load
+   - At line 310 verify that ``unbalanced`` is set to True to use the unbalanced version CustomCIFAR10
+   - At line 312 define your own ``remove_dict`` that will be applied to CustomCIFAR10
 
 3. From cmd run the following line of code to perform the supervised_learning (change the parameter ``name_of_your_output_model`` with the name that you want for the output model weights):
 ```shell
-   CUDA_VISIBLE_DEVICES=0 python unbalanced_supervised_learning.py --dataset_name cifar10 --model_name name_of_your_output_model
+   CUDA_VISIBLE_DEVICES=0 python unbalanced_supervised_learning.py --ssl_weights_dir ./data/experiments/...../name_of_your_input_model.pth --model_name name_of_your_output_model --new_resnet
 ```
+   The flag ``new_resnet`` is used to turn on its respective option
+      - Do not use the flag ``--new_resnet`` if your model has been trained using the ResNet defined by the AutoNovel authors. Use that flag if your model has been trained using a standard ResNet (as from ResNet original paper)
 
-4. Open the file ``unabalanced_auto_novel_for_tSNE.py``
-   - At line 22 check that ``tSNE`` is set to False
-   - At line 445 turn ``logging_on`` to True if you need to log the data to WandB, otherwise turn it to False
-   - At line 471 turn ``New_Resnet`` to True if you used a standard ResNet, let it to false if you used the ResNet defined by the authors
-   - At line 525 turn ``unbalanced`` to True to use the unbalanced version CustomCIFAR10
-   - At line 527 define your own ``remove_dict`` that will be applied to CustomCIFAR10
+4. Your trained model weights will be stored in ``data/experiments/unbalanced_supervised_learning/name_of_your_output_model.pth``
 
-5. Depending on the Incremental-Learning (IL) setting that you want to use to train your model:
-- If IL enabled -> run ``auto_novel_IL_cifar10_tSNE_unbalanced.sh`` through cmd using the following line of code (change the parameters ``name_of_you_input_model`` and ``name_of_your_output_model``):
+5. Once the ``unbalanced_supervised_learning-step`` is finished, open the file ``unabalanced_auto_novel.py``
+   - At line 410 turn ``logging_on`` to True if you need to log the data to WandB, otherwise check it to be False
+   - At line 430 turn ``New_Resnet`` to True if you used a standard ResNet, check it to be False if you used the ResNet defined by the authors
+   - At line 486 turn ``unbalanced`` to True to use the unbalanced version CustomCIFAR10
+   - At line 488 define your own ``remove_dict`` that will be applied to CustomCIFAR10
+
+6. Depending on the Incremental-Learning (IL) setting that you want to use to train your model:
+- If IL enabled -> run ``auto_novel_IL_cifar10_unbalanced.sh`` through cmd using the following line of code (change the parameters ``name_of_your_input_model`` and ``name_of_your_output_model``):
 ```shell
-   CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10_tSNE_unbalanced.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/unbalanced_supervised_learning/name_of_you_input_model.pth name_of_your_output_model
+   CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_IL_cifar10_unbalanced.sh ./data/experiments/...../name_of_your_input_model.pth name_of_your_output_model
 ```
 
-- If IL disabled -> run ``auto_novel_no_IL_cifar10_tSNE_unbalanced`` through cmd using the following line of code change the parameters ``name_of_you_input_model`` and ``name_of_your_output_model``):
+- If IL disabled -> run ``auto_novel_cifar10_unbalanced`` through cmd using the following line of code change the parameters ``name_of_your_input_model`` and ``name_of_your_output_model``):
 ```shell
-   CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_no_IL_cifar10_tSNE_unbalanced.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/unbalanced_supervised_learning/name_of_you_input_model.pth name_of_your_output_model
+   CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_cifar10_unbalanced.sh ./data/experiments/...../name_of_your_input_model.pth name_of_your_output_model
 ```
 
-6. Your trained model weights will be stored in ``data/experiments/unbalanced_auto_novel_for_tSNE/name_of_your_output_model.pth``
+7. Your trained model weights will be stored in ``data/experiments/unbalanced_auto_novel/name_of_your_output_model.pth``
 
 ## Plotting t-SNE for any experiment 
 The t-distributed Stochastic Neighbor Embedding is a statistical tool that allows to represent high dimensional samples into a low dimensional space relying on a statistical algorithm. Due to its stochastic nature this algorithm leads to different output for each run, also if the input data and the used parameters are exactly the same.
