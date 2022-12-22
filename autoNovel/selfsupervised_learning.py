@@ -184,7 +184,7 @@ def main():
     parser.add_argument('--no_cuda', action='store_true', default=False, help='disables CUDA training')
 
     # Add to the parser the argument: 'num_workers' with a default value of 4. It is used in the dataloader
-    parser.add_argument('--num_workers', type=int, default=4, help='number of data loading workers')
+    parser.add_argument('--num_workers', type=int, default=0, help='number of data loading workers')
 
     # Add to the parser the argument: 'seed' with a default value of 1. It is used in the dataloader
     parser.add_argument('--seed', type=int, default=1, help='random seed (default: 1)')
@@ -199,7 +199,7 @@ def main():
     parser.add_argument('--momentum', type=float, default=0.9, metavar='M', help='SGD momentum (default: 0.9)')
 
     # Add to the parser the argument: 'dataset_name' with a default value of cifar10. It is used in the dataset
-    parser.add_argument('--dataset_name', type=str, default='cifar10', help='options: cifar10, cifar100, svhn')
+    parser.add_argument('--dataset_name', type=str, default='cifar10', help='options: cifar10, cifar10c, cifar100, svhn')
 
     # Add to the parser the argument: 'dataset_root' with as default path the cifar10 path. It is used in the dataset
     parser.add_argument('--dataset_root', type=str, default='./data/datasets/CIFAR/')
