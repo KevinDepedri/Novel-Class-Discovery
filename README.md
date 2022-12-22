@@ -180,8 +180,10 @@ To plot the t-SNE for your model follow the ensuing procedure (steps using CIFAR
 4. The produced plots will be stored in the folder ``tSNE_plots/name_of_you_model``
 
 5. If you are working on a dataset different from CIFAR-10, or if other changes have been applied on the training procedure, then apply the due changes also to the py file ``auto_novel_tSNE_plot.py``
+***
 
 # Experiments performed on UNO
 
 ## Experiment 1 (Different number of unlabeled/labeled classes)
 NOEMI STUFF
+***
