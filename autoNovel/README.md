@@ -193,6 +193,9 @@ To run your own unbalanced experiment, follow the ensuing procedure:
 
 7. Your trained model weights will be stored in ``data/experiments/unbalanced_auto_novel/name_of_your_output_model.pth``
 
+## Experiment 4 (Different number of unlabeled/labeled classes)
+NOEMI STUFF
+
 ## Plotting t-SNE for any experiment 
 The t-distributed Stochastic Neighbor Embedding is a statistical tool that allows to represent high dimensional samples into a low dimensional space relying on a statistical algorithm. Due to its stochastic nature this algorithm leads to different output for each run, also if the input data and the used parameters are exactly the same.
 
