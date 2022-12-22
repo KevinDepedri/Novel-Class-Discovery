@@ -154,7 +154,7 @@ The experiment is based on a custom version of the CIFAR10 dataset called Custom
 
 To run your own unbalanced experiment, follow the ensuing procedure:
 
-1. Run ``selfsupervised_learning-step`` and store the weights of your model (refer to the of the ``readme`` file for the full procedure to follow for SSL training)
+1. Run ``selfsupervised_learning-step`` and store the weights of your model (refer to the ``readme`` file of AutoNovel for the full procedure to follow for SSL training)
 
 2. Open the file ``unbalanced_supervised_learning.py``
    - At line 191 turn ``logging_on`` to True if you need to log the data to WandB, otherwise check it to be False
