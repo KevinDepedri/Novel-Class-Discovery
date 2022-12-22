@@ -71,26 +71,43 @@ sh scripts/load_SSL_weights.sh
 
 ### Cifar-10 with domain shift experiment
 
-<span style="color:blue">**Jaccopo missing in here remove me when you are done jaccopo**</span>
+The main complication with Autonovel is that it's necessary to retrain the self-supervised and supervised step to perform Autonovel discovery when changing the novel dataset. 
+
+Cifar10 will be automatically corrupted by running the code using Gaussian Noise.
+
+To avoid running the full self-supervised pretraining stage, we have made our weights available by running ``download_mnisit_weights.sh`` script:
+
+   ```bash
+   sh scripts/download_cifar_c_weights.sh
+   ```
+
+To train Step 3 run:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_cifar10c.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/cifar_c/ ./data/experiments/cifar_c/supervised_learning/resnet_rotnet_cifar10_c.pth
+```
+
+To evaluate run:
+
+```bash
+CUDA_VISIBLE_DEVICES=0 python auto_novel_cifar10_c.py --mode test --dataset_name cifar10 --model_name resnet_IL_cifar10_c --exp_root ./data/experiments/pretrained/
+```
 
 ### Mnist with domain shift experiment
 
-1. The dataset will be automatically downloaded by running the code. The main problem in here is that you need to retrain the 3 steps to be able to work with these stuff. You can download our weights using script called ``download_mnisit_weights.sh``. Use this command to download the weights
+The MNIST dataset will be automatically downloaded by running the code.
+
+Pre-trained weights are available by running ``download_mnisit_weights.sh`` script:
 
    ```bash
    sh scripts/download_mnisit_weights.sh
    ```
 
-2. Passing the dataset_name should be enought to allow you to use the Mnist or Mnisit mixed dataset
+   - Passing ``mnisit`` leads to load the mnist dataset containing the first 5 classes from the normal MNIST and the second 5 classes from the MNIST-m dataset.
+   - Passing ``mnisit_base`` lead to loading the full MNIST dataset containing all the 10 classes. This can be treated as baseline.
+   
 
-   - Passing ``mnisit`` leads to load the mnist dataset containing the first 5 classes from the normal mnist and the second 5 classes from the mnist-m dataset.
-   - Passing ``mnisit_base`` lead to loading the full mnist dataset containing all the 10 classes. This can be used as baseline. 
-
-3. you are able to to run the three steps using this code. 
-
-To run the first 2 steps use the normal commands mentioned previously .
-
-To train Step 3 use this command
+To train Step 3 run:
 
 ```bash
 # Train on mnist_base
@@ -99,7 +116,7 @@ CUDA_VISIBLE_DEVICES=0 sh scripts/autonovel_IL_mnisit_mix.sh ./data/datasets/MNI
 CUDA_VISIBLE_DEVICES=0 sh scripts/autonovel_IL_mnisit_mix.sh ./data/datasets/MNISIT/ ./data/experiments/ ./data/experiments/supervised_learning/resnet_rotnet_mnisit_MIX.pth resnet_IL_minst_mix mnisit
 ```
 
-To evaluate use this command
+To evaluate run:
 
 ```bash
 # for mnist
