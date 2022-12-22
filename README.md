@@ -1,9 +1,9 @@
-# Trends_projects
+# <p align="center">Trends and Applications of Computer Vision - NCD Project</p> 
 
-Novel Class Discovery objective is to classify samples from two disjoint but similar dataset, one of which is labeled and the other unlabaled.
+Novel Class Discovery (NCD) objective is to classify samples from two disjoint but similar dataset, one of which is labeled and the other unlabaled.
 Here, we present some methods that tackle this task and our contributions: first, we further commented the original code, then we ran experiments to check the behaviors of these models in different settings.
 
-This repository is a student project developed by Noemi Canovi, Kevin Depedri, Jacopo Donà and Mostafa Haggag for the "Application and Trends of Computer Vision" course of the Master in Artificial Intelligent Systems at the University of Trento, a.y. 2022-2023. 
+This repository is a student project developed by Noemi Canovi, Kevin Depedri, Jacopo Donà and Mostafa Haggag for the "Trends and Applications of Computer Vision" course of the Master in Artificial Intelligent Systems at the University of Trento, a.y. 2022-2023. 
 
 We worked with the two following architectures:
 * AutoNovel
