@@ -100,7 +100,7 @@ Useful to understand the impact of domain shift on the performance of the model.
 Here, Cifar10 dataset has been automatically corrupted using Gaussian Noise.
 
 
-1. a. Run ``selfsupervised_learning`` and ``supervised_learning.py`` with the corrupted cifar
+1. a. Run ``selfsupervised_learning`` and ``supervised_learning.py`` with the Cifar10-C by passing ``cifar10c`` as dataset_name
    OR
    b. Download weights of self-supervised and supervised training, by running ``sh scripts/download_cifar_c_weights.sh``
 
