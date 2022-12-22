@@ -173,18 +173,18 @@ This work is supported by the [EPSRC Programme Grant Seebibyte EP/M013774/1](htt
 
 # Experiments performed on AutoNovel
 
-## Experiment (Experiment on different loss terms)
+## Experiment 1 (Experiment on different loss terms)
 
 1. Open Autonovel.py file.
 2. Search for the lose term of each different loss and comment it  and make sure that total loss term does not have this term that you are removing.
 3. Run different runs with the five different loss terms using the pre-trained weights.
 
-## Experiment (Change Topk experiment)
+## Experiment 2 (Change Topk experiment)
 
 * Open scripts/auto_novel_IL_cifar10.sh
 * Change the topk parameters and do a rerun with the topk that you want
 
-## Experiment (Remove SSL)
+## Experiment 3 (Remove SSL)
 
 * Open supervised_learning.py file.
 
@@ -206,7 +206,7 @@ This work is supported by the [EPSRC Programme Grant Seebibyte EP/M013774/1](htt
 * Re run autonovel.py 
 
 
-## Experiment 1 (Using different SSL techniques)
+## Experiment 4 (Using different SSL techniques)
 
 We are mainly trying to use different SSL methods used by [solo-learn](https://github.com/vturrisi/solo-learn) . We load the weights of different methods and accordingly start re training from step 2 and step 3.
 
@@ -224,7 +224,7 @@ sh scripts/load_SSL_weights.sh
 5. Re train Supervised learning step using the command mentioned above.
 6. Re train Auto novel learning step using the command mentioned above.
 
-## Experiment 2 (Domain Shift)
+## Experiment 5 (Domain Shift)
 
 ### Cifar-10 with domain shift experiment
 
@@ -277,7 +277,7 @@ CUDA_VISIBLE_DEVICES=0 python auto_novel.py --mode test --dataset_name mnisit_ba
 
 
 
-## Experiment 3 (Unbalanced Classes) - Supported only for CIFAR-10
+## Experiment  6 (Unbalanced Classes) - Supported only for CIFAR-10
 This experiment allows to train and test a model using a custom number of samples for each class of CIFAR10.
 
 We performed this experiment to see how the model performs in cases where the number of labeled samples is very low (1/10 of the unlabeled samples), and in the opposite cases, where the number of unlabeled samples is equal to 1/10 of the labeled samples.
@@ -322,7 +322,7 @@ To run your own unbalanced experiment, follow the ensuing procedure:
 
 7. Your trained model weights will be stored in ``data/experiments/unbalanced_auto_novel/name_of_your_output_model.pth``
 
-## Experiment 4 (Different number of unlabeled/labeled classes)
+## Experiment 7 (Different number of unlabeled/labeled classes)
 NOEMI STUFF
 
 ## Plotting t-SNE for any experiment 
