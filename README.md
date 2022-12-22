@@ -234,3 +234,13 @@ Useful to understand the impact of unbalanced domain with different number of la
 
 1. run ``main_pretrain.py`` specifying the number of labeled and unlabaled data with ``--num_labeled_classes <num_lab> --num_unlabeled_classes <num_unlab>``
 2. run ``main_discover.py`` specifying the number of labeled and unlabaled data with ``--num_labeled_classes <num_lab> --num_unlabeled_classes <num_unlab>``
+***
+
+# Contacts
+Noemi Canovi - (noemi.canovi@studenti.unitn.it)
+
+Jacopo Donà - (jacopo.dona@studenti.unitn.it)
+
+Mostafa Haggag - (mostafa.haggag@studenti.unitn.it)
+
+Kevin Depedri - (kevin.depedri@studenti.unitn.it)
