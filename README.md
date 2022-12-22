@@ -239,8 +239,8 @@ Useful to understand the impact of unbalanced domain with different number of la
 # Contacts
 Noemi Canovi - (noemi.canovi@studenti.unitn.it)
 
+Kevin Depedri - (kevin.depedri@studenti.unitn.it)
+
 Jacopo Donà - (jacopo.dona@studenti.unitn.it)
 
 Mostafa Haggag - (mostafa.haggag@studenti.unitn.it)
-
-Kevin Depedri - (kevin.depedri@studenti.unitn.it)
