@@ -107,7 +107,7 @@ year      = {2020}
 }
 ```
 
-# AutoNovel experiments that require clarification on how it was run
+# Experiments performed on AutoNovel
 
 ## Experiment 1 (Using different SSL techniques)
 We are mainly trying to use different SSL methods used by [solo-learn](https://github.com/vturrisi/solo-learn) . We load the weights of different methods and accordingly start re training from step 2 and step 3.
