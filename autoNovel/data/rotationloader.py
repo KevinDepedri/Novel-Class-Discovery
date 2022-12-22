@@ -17,6 +17,27 @@ import csv
 from tqdm import tqdm
 from pdb import set_trace as breakpoint
 
+def corruptCifar10(data,noise_factor=20,random_seed=0):
+    targets_to_corrupt = [5, 6, 7, 8, 9]
+    images=data.data
+    targets=data.targets
+    image_shape = images[0].shape
+    np.random.seed(random_seed)
+    if (images.shape[0] != len(targets)):
+        print('Error, size mismatch between number of samples and number of labels')
+        print('Corruption not applied')
+    else:
+        for i in range(0, len(targets)):
+            if (targets[i] in targets_to_corrupt):
+                normal_image = images[i]
+                noise = np.random.randint(low=-noise_factor, high=noise_factor, size=image_shape)
+                # noise=np.random.rand(image_shape)
+                corrupted_image = normal_image + noise
+                corrupted_image = np.clip(corrupted_image, 0, 255)  # we might get out of bounds due to noise
+                # corrupted_data.append(corrupted_image) #Insert corrupted image
+                images[i] = corrupted_image
+    data.data=images
+    return data
 
 class GenericDataset(data.Dataset):
     def __init__(self, dataset_name, split, random_sized_crop=False,
@@ -59,6 +80,37 @@ class GenericDataset(data.Dataset):
             # directory then download it since download=True), create a train split and apply the given transform.
             self.data = datasets.__dict__[self.dataset_name.upper()](
                 dataset_root, train=self.split == 'train', download=True, transform=self.transform)
+
+        elif self.dataset_name == 'cifar10c':  # Apply same transformations as cifar10 but add corruption noise to all novel classes
+            self.dataset_name = 'cifar10'
+            self.mean_pix = [x / 255.0 for x in
+                             [125.3, 123.0, 113.9]]  # [0.4913725490196078, 0.4823529411764706, 0.4466666666666667]
+            self.std_pix = [x / 255.0 for x in
+                            [63.0, 62.1, 66.7]]  # [0.24705882352941178, 0.24352941176470588, 0.2615686274509804]
+            # TODO: these above are the correct values for cifar, verify why in the CifarLoader file they are different
+            if self.random_sized_crop:
+                raise ValueError('The random size crop option is not supported for the CIFAR dataset')
+
+            # Build a transform as a list
+            transform = []
+            # If we are in the training split
+            if split != 'test':
+                # Perform a random crop of 32x32 with a padding of 4, if sequence provided it is [left,top,right,bottom]
+                transform.append(transforms.RandomCrop(32, padding=4))
+                # Horizontally flip the given image randomly with a given probability (default is 0.5)
+                transform.append(transforms.RandomHorizontalFlip())
+            # Convert the input into a numpy array
+            transform.append(lambda x: np.asarray(x))
+
+            # Compose the previously defined transform
+            self.transform = transforms.Compose(transform)
+
+            # call dataset.__dict__['CIFAR10'], put CIFAR10 dataset in the dataset_root directory (if it is not in the
+            # directory then download it since download=True), create a train split and apply the given transform.
+            self.data = datasets.__dict__[self.dataset_name.upper()](
+                dataset_root, train=self.split == 'train', download=True, transform=self.transform)
+
+            self.data = corruptCifar10(self.data)
 
         # If the dataset is cifar100 then apply the following procedure (same as above)
         elif self.dataset_name == 'cifar100':
