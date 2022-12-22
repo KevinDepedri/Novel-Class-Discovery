@@ -173,22 +173,25 @@ This work is supported by the [EPSRC Programme Grant Seebibyte EP/M013774/1](htt
 
 # Experiments performed on AutoNovel
 
-## Experiment 1 (Experiment on different loss terms)
+## Experiment 1 (Loss terms ablation study)
 
-1. Open Autonovel.py file.
-2. Search for the lose term of each different loss and comment it  and make sure that total loss term does not have this term that you are removing.
-3. Run different runs with the five different loss terms using the pre-trained weights.
+1. Open ``Autonovel.py`` file
+2. Search for the 5 different loss terms and comment one of these to make sure that total loss term does not rely on this term
+3. Run the ``autonovel-step`` without that loss term using the pre-trained weights of the ``supervised_learning-step``
+4. Repeat the procedure 5 times to see the impact of each loss term on the model
 
 ## Experiment 2 (Change Topk experiment)
 
-* Open scripts/auto_novel_IL_cifar10.sh
-* Change the topk parameters and do a rerun with the topk that you want
+1. Open ``scripts/auto_novel_IL_cifar10.sh``
+2. Change the ``topk`` parameters and train the model with the topk that you want
+3. Repeat this procedure multiple times to see the impact of different ``topk`` values
+
 
 ## Experiment 3 (Remove SSL)
 
-* Open supervised_learning.py file.
+1. Open ``supervised_learning.py`` file.
 
-* Comment lines 301-310 
+2. Comment lines 301-310 
 
   ```python
       model.load_state_dict(state_dict, strict=False)
@@ -197,30 +200,29 @@ This work is supported by the [EPSRC Programme Grant Seebibyte EP/M013774/1](htt
           # layer before the two heads), then freeze that parameter. In this way we are ensuring that all the parameters
           # will be frozen except for the two heads and the features layer, which we want to train.
           if 'head' not in name and 'layer4' not in name:
-              param.requires_grad = False
-              
+              param.requires_grad = False 
   ```
 
-* Re run supervised_learning.py 
+3. Run ``supervised_learning.py`` 
 
-* Re run autonovel.py 
+4. Run ``autonovel.py`` 
 
 
 ## Experiment 4 (Using different SSL techniques)
 
-We are mainly trying to use different SSL methods used by [solo-learn](https://github.com/vturrisi/solo-learn) . We load the weights of different methods and accordingly start re training from step 2 and step 3.
+Here we are trying different SSL methods taken by the SSL-library [solo-learn](https://github.com/vturrisi/solo-learn). We start by loading the weights of different methods, these weights are used as SSL weights (avoiding step 1). At this point we move on with the training directly from step 2 and step 3.
 
-1. run the following command to download the weights
+1. Run the following command to download the weights
 
 ```bash
 sh scripts/load_SSL_weights.sh
 ```
 
-2. open supervised_learning.py and you will find the following SSL method (Barlow_twins, simsiam, supcon, swav, vibcreg, vicreg, wmse)
-3. There is 2 flags called **New_SSL_methods** and **New_Resnet_config** at line 229,230. 
-   1. New_SSL_methods : When you set it to true you are allowed to work other SSL methods other than rotnet. Setting it to false automatically indicate that you are running with rotnet.
-   2. New_Resnet_config : This flag is mainly used to indicate if you should use the Autonovel Resnet or Resnet architecture similar to solo learn. We mainly saw that there is a difference in the performance of both. When you load the any of the Sololearn methods, we automatically use the similar Resnet architecture. When we are using rotnet, we leave it to the user to decide what to do. Setting to False means that we are using the Autonovel Resnet architecture.
-4. Set variable called **ssl**  in line 237 to one of these keys (Barlow_twins, simsiam, supcon, swav, vibcreg, vicreg, wmse) to indicate what method of SSL to use.
+2. Open ``supervised_learning.py`` and you will find the following SSL method (Barlow_twins, simsiam, supcon, swav, vibcreg, vicreg, wmse)
+3. There are 2 flags called ``New_SSL_methods`` and ``New_Resnet_config`` at line 229, 230. 
+   - ``New_SSL_methods`` : When you set it to true you are allowed to work other SSL methods other than rotnet. Setting it to false automatically indicate that you are running with rotnet.
+   - ``New_Resnet_config`` : This flag is used to indicate if you use the Autonovel Resnet or Resnet architecture similar to solo learn. There is a small difference in the performance between these two. When you load any of the Sololearn methods, we automatically use the similar Resnet architecture. When we are using rotnet, we leave it to the user to decide what to do. Setting to False means that we are using the Autonovel Resnet architecture.
+4. Set variable called ``ssl``  in line 237 to one of these keys (Barlow_twins, simsiam, supcon, swav, vibcreg, vicreg, wmse) to indicate what method of SSL to use.
 5. Re train Supervised learning step using the command mentioned above.
 6. Re train Auto novel learning step using the command mentioned above.
 
@@ -232,18 +234,16 @@ sh scripts/load_SSL_weights.sh
 
 ### Mnist with domain shift experiment
 
-1. The dataset will be automatically downloaded by running the code. The main problem in here is that you need to retrain the 3 steps to be able to work with these stuff. You can download our weights using script called "download_mnisit_weights.sh". Use this command to download the weights
+1. The dataset will be automatically downloaded by running the code. The main problem in here is that you need to retrain the 3 steps to be able to work with these stuff. You can download our weights using script called ``download_mnisit_weights.sh``. Use this command to download the weights
 
    ```bash
    sh scripts/download_mnisit_weights.sh
    ```
 
-   
-
 2. Passing the dataset_name should be enought to allow you to use the Mnist or Mnisit mixed dataset
 
-   1. Passing "mnisit" leads to load the mnist dataset containing the first 5 classes from the normal mnist and the second 5 classes from the mnist-m dataset.
-   2. Passing "mnisit_base" lead to loading the full mnist dataset containing all the 10 classes. This can be used as baseline. 
+   - Passing ``mnisit`` leads to load the mnist dataset containing the first 5 classes from the normal mnist and the second 5 classes from the mnist-m dataset.
+   - Passing ``mnisit_base`` lead to loading the full mnist dataset containing all the 10 classes. This can be used as baseline. 
 
 3. you are able to to run the three steps using this code. 
 
@@ -272,21 +272,21 @@ CUDA_VISIBLE_DEVICES=0 python auto_novel.py --mode test --dataset_name mnisit_ba
 ## Experiment  6 (Unbalanced Classes) - Supported only for CIFAR-10
 This experiment allows to train and test a model using a custom number of samples for each class of CIFAR10.
 
-We performed this experiment to see how the model performs in cases where the number of labeled samples is very low (1/10 of the unlabeled samples), and in the opposite cases, where the number of unlabeled samples is equal to 1/10 of the labeled samples.
+We performed this experiment to see how the model performs in the case where the number of labeled samples is very low (1/10 of the unlabeled samples), and in the opposite case, where the number of unlabeled samples is equal to 1/10 of the labeled samples.
 
-The experiment is based on a custom version of the CIFAR10 dataset called CustomCIFAR10. This takes in input all the usual parameters of the CIFAR10 dataset and a ``remove_dict``. This parameters allow to give in input a dictionary, which specifies how many samples we want to be removed for each class. The dictionary will be something like: ``remove_dict={0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 4500, 6: 4500, 7: 4500, 8: 4500, 9: 4500}``. In this previous example we are removing 0 samples for each class from 0 to 4, while we are removing 4500 samples for each class from 5 to 9. The specified number of samples to remove is removed randomly between the samples of the specified class.
+The experiment is based on a custom version of the CIFAR10 dataset called CustomCIFAR10. This takes in input all the usual parameters of the CIFAR10 dataset and a ``remove_dict``. This parameters allow to give in input a dictionary, which specifies how many samples we want to be removed for each class. The dictionary need to follow this format: ``remove_dict={0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 4500, 6: 4500, 7: 4500, 8: 4500, 9: 4500}``. In this previous example we are removing 0 samples for each class from 0 to 4, while we are removing 4500 samples for each class from 5 to 9. The specified number of samples to remove is removed randomly between the samples of the specified class.
 
 To run your own unbalanced experiment, follow the ensuing procedure:
 
-1. Train your model until the end of the ``selfsupervised_learning-step`` and store the weights of your model. Refer to the ``readme`` file of the [original AutoNovel's authors github](https://github.com/k-han/AutoNovel) for the full procedure to follow for SSL training
+1. Train your model until the end of the ``selfsupervised_learning-step`` and store the weights of your model (refer to the first part of the ``readme`` file for the full procedure to follow for SSL training)
 
 2. Open the file ``unbalanced_supervised_learning.py``
    - At line 191 turn ``logging_on`` to True if you need to log the data to WandB, otherwise check it to be False
    - At line 224 turn ``New_SSL_methods`` to True if you have used a different SSL techinque (see Experiment 1), in that case, specify at line 235 which model you want to load. Otherwise check it to be False
-   - At line 310 verify that ``unbalanced`` is set to True to use the unbalanced version CustomCIFAR10
+   - At line 310 verify that ``unbalanced`` is set to True to use the unbalanced version of CustomCIFAR10
    - At line 312 define your own ``remove_dict`` that will be applied to CustomCIFAR10
 
-3. From cmd run the following line of code to perform the supervised_learning (change the parameter ``name_of_your_output_model`` with the name that you want for the output model weights):
+3. From cmd run the following line of code to perform the supervised_learning (change the parameters ``name_of_your_input_model`` and ``name_of_your_output_model``):
    ```shell
       CUDA_VISIBLE_DEVICES=0 python unbalanced_supervised_learning.py --ssl_weights_dir ./data/experiments/...../name_of_your_input_model.pth --model_name  name_of_your_output_model --new_resnet
    ```
@@ -298,7 +298,7 @@ To run your own unbalanced experiment, follow the ensuing procedure:
 5. Once the ``unbalanced_supervised_learning-step`` is finished, open the file ``unabalanced_auto_novel.py``
    - At line 410 turn ``logging_on`` to True if you need to log the data to WandB, otherwise check it to be False
    - At line 430 turn ``New_Resnet`` to True if you used a standard ResNet, check it to be False if you used the ResNet defined by the authors
-   - At line 486 turn ``unbalanced`` to True to use the unbalanced version CustomCIFAR10
+   - At line 486 turn ``unbalanced`` to True to use the unbalanced version of CustomCIFAR10
    - At line 488 define your own ``remove_dict`` that will be applied to CustomCIFAR10
 
 6. Depending on the Incremental-Learning (IL) setting that you want to use to train your model:
@@ -320,7 +320,7 @@ NOEMI STUFF
 ## Plotting t-SNE for any experiment 
 The t-distributed Stochastic Neighbor Embedding is a statistical tool that allows to represent high dimensional samples into a low dimensional space relying on a statistical algorithm. Due to its stochastic nature this algorithm leads to different output for each run, also if the input data and the used parameters are exactly the same.
 
-We used the t-SNE plots to show how much the features learned by our models are effective. They allow us to see how the samples belonging to different categories are clustered. Ideally, we would like to see compact cluster well distatiented between them. This condition would point that our model learn some good features which allows to distinguish between samples coming from different classes in an efficient way.
+We used the t-SNE plots to show how much the features learned by our models are effective. They allow us to see how the samples belonging to different categories are clustered. Ideally, we would like to see compact cluster well distatiented between them. This condition would point that our model learnt some good features which allows to distinguish between samples coming from different classes in an efficient way.
 
 To plot the t-SNE for your model follow the ensuing procedure (steps using CIFAR-10 as dataset):
 
