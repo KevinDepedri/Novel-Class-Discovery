@@ -21,7 +21,7 @@ All the weights of the trained model resulting from performed experiments can be
 3. Run the ``autonovel-step`` without that loss term using the pre-trained weights of the ``supervised_learning-step``
 4. Repeat the procedure 5 times to see the impact of each loss term on the model
 
-## Experiment 2 (Change Topk experiment)
+## Experiment 2 (Change Topk)
 
 1. Open ``scripts/auto_novel_IL_cifar10.sh``
 2. Change the ``topk`` parameters and train the model with the topk that you want
@@ -158,7 +158,7 @@ To run your own unbalanced experiment, follow the ensuing procedure:
 ## Experiment 7 (Different number of unlabeled/labeled classes)
 NOEMI STUFF
 
-## Plotting t-SNE for any experiment 
+## Plotting t-SNE graph for any experiment
 The t-distributed Stochastic Neighbor Embedding is a statistical tool that allows to represent high dimensional samples into a low dimensional space relying on a statistical algorithm. Due to its stochastic nature this algorithm leads to different output for each run, also if the input data and the used parameters are exactly the same.
 
 We used the t-SNE plots to show how much the features learned by our models are effective. They allow us to see how the samples belonging to different categories are clustered. Ideally, we would like to see compact cluster well distatiented between them. This condition would point that our model learnt some good features which allows to distinguish between samples coming from different classes in an efficient way.
