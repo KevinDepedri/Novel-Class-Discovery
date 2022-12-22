@@ -100,21 +100,22 @@ Useful to understand the impact of domain shift on the performance of the model.
 Here, Cifar10 dataset has been automatically corrupted using Gaussian Noise.
 
 
-1. a. Run ``selfsupervised_learning`` and ``supervised_learning.py`` with the Cifar10-C by passing ``cifar10c`` as dataset_name
+1. a. Run ``selfsupervised_learning`` and ``supervised_learning_cifar10c.py`` with the Cifar10-C by passing ``cifar10c`` as dataset_name
    OR
    b. Download weights of self-supervised and supervised training, by running ``sh scripts/download_cifar_c_weights.sh``
-
 2. Run
 
-``bash
+```bash
+# cifar-c
 CUDA_VISIBLE_DEVICES=0 sh scripts/auto_novel_cifar10c.sh ./data/datasets/CIFAR/ ./data/experiments/ ./data/experiments/cifar_c/ ./data/experiments/cifar_c/supervised_learning/resnet_rotnet_cifar10_c.pth
-``
+```
 
 To evaluate run:
 
-``bash
-CUDA_VISIBLE_DEVICES=0 python auto_novel_cifar10_c.py --mode test --dataset_name cifar10 --model_name resnet_IL_cifar10_c --exp_root ./data/experiments/pretrained/
-``
+```bash
+# cifar-c
+CUDA_VISIBLE_DEVICES=0 python auto_novel_cifar10_c.py --mode test --dataset_name cifar10 --model_name resnet_IL_cifar10_c --exp_root ./data/experiments/pretrained/ 
+```
 
 ### Mnist with domain shift experiment
 
@@ -199,7 +200,7 @@ Useful to understand the impact of unbalanced domain with different number of la
 
  ```shell
  auto_novel.py --dataset_name cifar10 --warmup_model_dir <checkpoint supervised model> --dataset_root <dataset directory> --model_name <model_name>  --num_labeled_classes <num_lab> --num_unlabeled_classes <num_unlab> --lr 0.1  --gamma 0.1 --weight_decay 1e-4 --step_size 170 --batch_size 128 --epochs 200 --rampup_length 50 --rampup_coefficient 5.0 --seed 0 --mode train
-```
+ ```
 
 ## Plotting t-SNE graph for any experiment
 The t-distributed Stochastic Neighbor Embedding is a statistical tool that allows to represent high dimensional samples into a low dimensional space relying on a statistical algorithm. Due to its stochastic nature this algorithm leads to different output for each run, also if the input data and the used parameters are exactly the same.
