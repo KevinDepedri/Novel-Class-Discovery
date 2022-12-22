@@ -247,15 +247,7 @@ sh scripts/load_SSL_weights.sh
 
 3. you are able to to run the three steps using this code. 
 
-To train Step 1 use this command
-
-```
-
-```
-
-To train Step 2 use this command
-
-
+To run the first 2 steps use the normal commands mentioned previously .
 
 To train Step 3 use this command
 
